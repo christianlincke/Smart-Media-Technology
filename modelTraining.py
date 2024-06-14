@@ -118,11 +118,3 @@ writer.add_hparams({"training files": str(csv_files),
                    {"loss": loss.item()})
 writer.flush()
 writer.close()
-
-"""
-Run this from terminal to start Tensorboard:
-
-tensorboard --logdir=runs
-
-Note: Safari won't open the page, you need chrome/firefox...!
-"""

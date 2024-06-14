@@ -102,11 +102,14 @@ all_samples = full_closed_samples + quarter_closed_samples + half_closed_samples
 
 # Check for existing file name to increment suffix
 i = 0
-while os.path.exists(path + "hand_gesture_data_{}.csv".format(i)):
+while os.path.exists(path + f"hand_gesture_data_{time.asctime().replace(' ', '_')}.csv"):
     i += 1
 
+# better way to name files - avoids merge conflicts (unless we happen to do training at the exact same second)
+date_time = time.asctime().replace(" ", "_")
+
 # Save gesture data to CSV
-with open(path + 'hand_gesture_data_{}.csv'.format(i), 'w', newline='') as file:
+with open(path + f'hand_gesture_data_{date_time}.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['gesture'] + [f'[{i}]' for i in range(21)])
     for landmarks, gesture_label in all_samples:
