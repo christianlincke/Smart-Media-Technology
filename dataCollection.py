@@ -5,7 +5,7 @@ Landmark data is saved in a csv file. The filenames automatically increment.
 HOWEVER: if we use github and each record our own data, merging our branches will mess things up.
 This will be adressed so we can individually contribute training data.
 
-You dont need to run this if you just want to turn your hand gestures into midi.
+You dont need to run this if you just want to turn your hand gestures into MIDI.
 """
 
 import cv2
@@ -72,12 +72,16 @@ def calibrate_gesture(gesture_index, record_time):
         if not ret:
             break
 
-        gesture_name = ["closed fist", "quarter-closed hand", "half-closed hand", "three-quarter-closed hand", "open palm"]
+        gesture_name = ["fully closed",
+                        "25% open",
+                        "50% open",
+                        "75% open",
+                        "100% open"]
 
         # flip frame horizontally
         frame = cv2.flip(frame, 1)
         # Display instructions
-        cv2.putText(frame, f"Show {gesture_name[gesture_index]} and press 'r' to record. Press 'q' to quit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        cv2.putText(frame, f"Show {gesture_name[gesture_index]} hand and press 'r' to record. Press 'q' to quit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
         cv2.imshow('Hand Gesture recording', frame)
 
         if cv2.waitKey(5) & 0xFF == ord('r'):
@@ -100,12 +104,8 @@ open_palm_samples = calibrate_gesture(4, RECORD_TIME)
 # Combine all samples for calibration and training
 all_samples = full_closed_samples + quarter_closed_samples + half_closed_samples + three_quarter_closed_samples + open_palm_samples
 
-# Check for existing file name to increment suffix
-i = 0
-while os.path.exists(path + f"hand_gesture_data_{time.asctime().replace(' ', '_')}.csv"):
-    i += 1
-
-# better way to name files - avoids merge conflicts (unless we happen to do training at the exact same second)
+# better way to name files - avoids merge conflicts
+# (unless multiple people happen to do training at the exact same second)
 date_time = time.asctime().replace(" ", "_")
 
 # Save gesture data to CSV
