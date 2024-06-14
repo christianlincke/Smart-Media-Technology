@@ -1,3 +1,6 @@
+"""
+Test script to check if midi works.
+"""
 import mido
 import rtmidi
 import time
