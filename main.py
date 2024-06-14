@@ -1,3 +1,8 @@
+"""
+Hand Spread Recognition Script
+Reads the hand landmarks using Media Pipe and evaluates them with the trained Model.
+Outputs MIDI CC message for this value.
+"""
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -7,7 +12,10 @@ import model_class
 import mido
 import rtmidi
 
-MIDI = 'ON'
+# Define Midi thing
+MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
+midi_channel = 1 # MIDI Output Channel
+midi_control = 1 # MIDI CC Message
 
 # define midi port
 if MIDI == 'ON':
@@ -60,10 +68,10 @@ while cap.isOpened():
                 prediction = model(input_tensor)
                 gesture_value = prediction.item()
 
-            # send midi cc message
+            # Create and send midi cc message
             cc = min(127, max(0, int(gesture_value * 127)))
             if MIDI == 'ON':
-                msg = mido.Message('control_change', channel=1, control=1, value=cc)
+                msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
                 port.send(msg)
 
             # Display the predicted spread value

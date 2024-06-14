@@ -1,3 +1,13 @@
+"""
+This Script is used for training data collection.
+Records landmark samples for 0% (closed fist), 25%, 50%, 75% and 100% open hand.
+Landmark data is saved in a csv file. The filenames automatically increment.
+HOWEVER: if we use github and each record our own data, merging our branches will mess things up.
+This will be adressed so we can individually contribute training data.
+
+You dont need to run this if you just want to turn your hand gestures into midi.
+"""
+
 import cv2
 import mediapipe as mp
 import numpy as np

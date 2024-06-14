@@ -1,3 +1,12 @@
+"""
+This script trains the model and saves the trained parameters to a file.
+
+Run this from terminal to start Tensorboard:
+    tensorboard --logdir=runs
+Note: Safari won't open the page, you need chrome/firefox...!
+
+You dont need to run this if you just want to turn your hand gestures into midi.
+"""
 import pandas as pd
 import torch
 import torch.nn as nn
