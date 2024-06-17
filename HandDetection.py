@@ -5,12 +5,9 @@ Outputs MIDI CC message for this value.
 """
 import cv2
 import mediapipe as mp
-import numpy as np
 import torch
-import torch.nn as nn
-import model_class
+from Models import HandModel
 import mido
-import rtmidi
 
 # Define Midi thing
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
@@ -22,8 +19,8 @@ if MIDI == 'ON':
     port = mido.open_output('IAC-Treiber Bus 1')
 
 # Initialize the model
-model = model_class.HandGestureModel()
-model.load_state_dict(torch.load('hand_gesture_model.pth'))
+model = handModel.HandGestureModel()
+model.load_state_dict(torch.load('Models/hand_gesture_model.pth'))
 model.eval()
 
 # Initialize MediaPipe Hands.
@@ -67,16 +64,20 @@ while cap.isOpened():
             with torch.no_grad():
                 prediction = model(input_tensor)
                 gesture_value = prediction.item()
+    else:
+        gesture_value = 0
+        # Create and send midi cc message
+    cc = min(127, max(0, int(gesture_value * 127)))
 
-            # Create and send midi cc message
-            cc = min(127, max(0, int(gesture_value * 127)))
-            if MIDI == 'ON':
-                msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
-                port.send(msg)
+    if MIDI == 'ON':
+        msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
+        port.send(msg)
 
-            # Display the predicted spread value
-            cv2.putText(frame, f"Gesture Value: {gesture_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-            #print(f"Predicted spread value: {spread_value}")
+    # Display the predicted spread value
+    frame = cv2.flip(frame, 1)
+
+    cv2.putText(frame, f"Gesture Value: {gesture_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    # print(f"Predicted spread value: {spread_value}")
 
     # Display the image.
     cv2.putText(frame, f"Hand Detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)

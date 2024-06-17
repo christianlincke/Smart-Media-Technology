@@ -11,17 +11,15 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import model_class
+from Models import HandModel
 import time
-import torchvision
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 import glob
-import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 
 #### HYPERPARAMETERS ###
-num_epochs = 100
+num_epochs = 150
 learning_rate = 0.001
 batch_size = 32
 
@@ -68,7 +66,7 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Initialize the model, loss function and optimizer
-model = model_class.HandGestureModel()
+model = handModel.HandGestureModel()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -104,7 +102,7 @@ for epoch in range(num_epochs):
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}')
 
 # Save the trained model
-torch.save(model.state_dict(), 'hand_gesture_model.pth')
+torch.save(model.state_dict(), 'Models/hand_gesture_model.pth')
 print("Model training completed and saved.")
 
 landmarks, labels = next(iter(train_loader))

@@ -11,7 +11,6 @@ import mediapipe as mp
 import numpy as np
 import time
 import csv
-import os
 
 # Directory to fsave the data to
 path = 'hand_data/'
