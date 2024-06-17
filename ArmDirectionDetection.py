@@ -10,16 +10,10 @@ midi_channel = 1 # MIDI Output Channel
 midi_control = 2 # MIDI CC Message
 
 # Which arm should be detected? 'left' or 'right'
-ARM = 'right'
+ARM = 'left'
 
 # assign mask to extract relevant landmarks
-if ARM == 'right':
-    landmark_mask = [0, 7, 8, 12, 14, 16, 23, 24]
-elif ARM == 'left':
-    landmark_mask = [0, 7, 8, 11, 13, 15, 23, 23]
-else:
-    print(f"'ARM' needs to be 'left' or 'right' - not {ARM}")
-    quit()
+landmark_mask = ArmModel.landmarkMask(ARM)
 
 # define midi port
 if MIDI == 'ON':
@@ -31,7 +25,7 @@ model = ArmModel.PoseGestureModel()
 model.load_state_dict(torch.load(model_path + f'arm_direction_model_{ARM}.pth'))
 model.eval()
 
-# Initialize MediaPipe Hands.
+# Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=True, min_detection_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
@@ -57,10 +51,10 @@ while cap.isOpened():
     # Convert the BGR image to RGB.
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Process the image and detect the hands.
+    # Process the image and detect the pose.
     results = pose.process(image)
 
-    # Draw hand landmarks.
+    # Draw pose landmarks.
     if results.pose_landmarks:
         mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
@@ -73,23 +67,23 @@ while cap.isOpened():
         # Predict the gesture.
         with torch.no_grad():
             prediction = model(input_tensor)
-            gesture_value = prediction.item()
+            direction_value = prediction.item()
 
         # Display the predicted spread value
         #print(f"Predicted spread value: {spread_value}")
     else:
-        gesture_value = 0
+        direction_value = 0
 
 
     # send midi cc message
-    cc = min(127, max(0, int((gesture_value + 0.5) * 127)))
+    cc = min(127, max(0, int((direction_value + 0.5) * 127)))
     if MIDI == 'ON':
         msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
         port.send(msg)
 
     # Flip & Display the image.
     frame = cv2.flip(frame, 1)
-    cv2.putText(frame, f"Gesture Value: {gesture_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"Gesture Value: {direction_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.putText(frame, f"Direction Detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.imshow('Pose Gesture Recognition', frame)
 

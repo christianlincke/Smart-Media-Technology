@@ -15,3 +15,17 @@ class PoseGestureModel(nn.Module):
         x = torch.relu(x)
         x = self.fc3(x)
         return x
+
+def landmarkMask(arm):
+    """
+    return which landmarks are to be used for each arm
+    :param arm: str 'left' or 'right'
+    :return: list landmarks to be used
+    """
+
+    if arm.lower() == 'right':
+        return [0, 7, 8, 12, 14, 16, 23, 24]
+    elif arm.lower() == 'left':
+        return [0, 7, 8, 11, 13, 15, 23, 23]
+    else:
+        raise Exception("ARM must be 'left' or 'right'!")

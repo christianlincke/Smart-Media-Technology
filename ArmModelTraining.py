@@ -10,10 +10,10 @@ import glob
 #from torch.utils.tensorboard import SummaryWriter
 
 # Which arm should be trained? 'left' or 'right'
-ARM = 'right'
+ARM = 'left'
 
 # Number of landmarks to be used
-num_landmarks = 8
+num_landmarks = len(ArmModel.landmarkMask(ARM))
 
 #### HYPERPARAMETERS ###
 num_epochs = 100

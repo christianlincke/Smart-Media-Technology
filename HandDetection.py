@@ -19,7 +19,7 @@ if MIDI == 'ON':
     port = mido.open_output('IAC-Treiber Bus 1')
 
 # Initialize the model
-model = handModel.HandGestureModel()
+model = HandModel.HandGestureModel()
 model.load_state_dict(torch.load('Models/hand_gesture_model.pth'))
 model.eval()
 
@@ -63,11 +63,11 @@ while cap.isOpened():
             # Predict the gesture.
             with torch.no_grad():
                 prediction = model(input_tensor)
-                gesture_value = prediction.item()
+                hand_value = prediction.item()
     else:
-        gesture_value = 0
+        hand_value = 0
         # Create and send midi cc message
-    cc = min(127, max(0, int(gesture_value * 127)))
+    cc = min(127, max(0, int(hand_value * 127)))
 
     if MIDI == 'ON':
         msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
@@ -76,7 +76,7 @@ while cap.isOpened():
     # Display the predicted spread value
     frame = cv2.flip(frame, 1)
 
-    cv2.putText(frame, f"Gesture Value: {gesture_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"Gesture Value: {hand_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     # print(f"Predicted spread value: {spread_value}")
 
     # Display the image.

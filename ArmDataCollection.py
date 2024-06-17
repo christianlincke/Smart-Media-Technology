@@ -1,5 +1,6 @@
 import cv2
 import mediapipe as mp
+from Models import ArmModel
 import numpy as np
 import time
 import csv
@@ -8,13 +9,8 @@ import csv
 ARM = 'left'
 
 # assign mask to extract relevant landmarks
-if ARM == 'right':
-    landmark_mask = [0, 7, 8, 12, 14, 16, 23, 24]
-elif ARM == 'left':
-    landmark_mask = [0, 7, 8, 11, 13, 15, 23, 23]
-else:
-    print(f"'ARM' needs to be 'left' or 'right' - not {ARM}")
-    quit()
+landmark_mask = ArmModel.landmarkMask(ARM)
+
 
 # Directory to save the data to
 path = f'arm_direction_data_{ARM}/'
