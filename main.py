@@ -1,6 +1,7 @@
 """
 perform both hand spread and arm direction detection.
-
+Select which arm should be detected in line 13.
+17.06.2024
 """
 import cv2
 import mediapipe as mp
@@ -8,14 +9,14 @@ import torch
 from Models import ArmModel, HandModel
 import mido
 
+# Which arm should be detected? 'left' or 'right' #
+ARM = 'right'
+
 # Output MIDI? 'ON' / 'OFF'
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
 midi_channel = 1 # MIDI Output Channel
 midi_control_hand = 1 # MIDI CC Message for hand spread
 midi_control_dir = 2 # MIDI CC Message for arm direction
-
-# Which arm should be detected? 'left' or 'right'
-ARM = 'right'
 
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel.landmarkMask(ARM)
@@ -126,7 +127,7 @@ while cap.isOpened():
 
     # Flip & Display the image.
     frame = cv2.flip(frame, 1)
-    cv2.putText(frame, f"Hand and Arm detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"{ARM} Hand and Arm detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.putText(frame, f"Hand Value: {hand_value:.2f} CC : {cc_hand}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.putText(frame, f"Dir Value: {direction_value:.2f} CC : {cc_dir}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.imshow('Pose Gesture Recognition', frame)
