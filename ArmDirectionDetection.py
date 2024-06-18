@@ -11,6 +11,7 @@ midi_control = 2 # MIDI CC Message
 
 # Which arm should be detected? 'left' or 'right'
 ARM = 'left'
+PARAM = 'direction' # 'stretch' or 'direction'
 
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel.landmarkMask(ARM)
@@ -22,7 +23,7 @@ if MIDI == 'ON':
 # Initialize the model
 model_path = 'Models/'
 model = ArmModel.PoseGestureModel()
-model.load_state_dict(torch.load(model_path + f'arm_direction_model_{ARM}.pth'))
+model.load_state_dict(torch.load(model_path + f'arm_{PARAM}_model_{ARM}.pth'))
 model.eval()
 
 # Initialize MediaPipe Pose
@@ -84,7 +85,7 @@ while cap.isOpened():
     # Flip & Display the image.
     frame = cv2.flip(frame, 1)
     cv2.putText(frame, f"Gesture Value: {direction_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-    cv2.putText(frame, f"Direction Detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"{PARAM} Detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.imshow('Pose Gesture Recognition', frame)
 
     if cv2.waitKey(5) & 0xFF == ord('q'):

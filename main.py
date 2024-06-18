@@ -10,7 +10,8 @@ from Models import ArmModel, HandModel
 import mido
 
 # Which arm should be detected? 'left' or 'right' #
-ARM = 'right'
+ARM = 'right' # 'left' or 'right'
+PARAM = 'direction' # 'stretch' or 'direction'
 
 # Define Midi stuff
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
@@ -39,7 +40,7 @@ landmark_mask = ArmModel.landmarkMask(ARM)
 model_path = 'Models/'
 # Arm direction model
 arm_model = ArmModel.PoseGestureModel()     # Arm Model
-arm_model.load_state_dict(torch.load(model_path + f'arm_direction_model_{ARM}.pth'))
+arm_model.load_state_dict(torch.load(model_path + f'arm_{PARAM}_model_{ARM}.pth'))
 arm_model.eval()
 # Hand spread model
 hand_model = HandModel.HandGestureModel()   # Hand Model
