@@ -9,14 +9,22 @@ import torch
 from Models import HandModel
 import mido
 
-# Define Midi thing
+# Define Midi stuff
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
+MIDI_MODE = 'NOTE' # or 'NOTE'
 midi_channel = 1 # MIDI Output Channel
 midi_control = 1 # MIDI CC Message
+midi_note = 60 # MIDI Note to be send
+midi_vel = 100 # MIDI velocity
+midi_thresh = 0.5 # threshold at which the note triggers
 
 # define midi port
 if MIDI == 'ON':
     port = mido.open_output('IAC-Treiber Bus 1')
+
+# define tracking variable, only if MIDI_MODE is note
+if MIDI_MODE == 'NOTE':
+    last_hand_value = 0
 
 # Initialize the model
 model = HandModel.HandGestureModel()
@@ -32,10 +40,36 @@ mp_drawing = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(0)
 
 def get_landmarks_coordinates(hand_landmarks):
+    """
+    converts landmarks coordinate type
+    :param hand_landmarks:
+    :return:
+    """
     coordinates = []
     for landmark in hand_landmarks.landmark:
         coordinates.extend([landmark.x, landmark.y, landmark.z])
     return coordinates
+
+def check_hand_trigger(last_value, this_value, note):
+    """
+    checks if hand spread exceeds threshold and triggers note on/off.
+
+    :param last_value: float hand value of the last frame
+    :param this_value: float hand value of the current frame
+    :param note: MIDI note
+    :return:
+    """
+
+    if last_value < midi_thresh and this_value >= midi_thresh:
+        # send Note On
+        msg = mido.Message('note_on', channel=midi_channel, note=note, velocity=midi_vel)
+        port.send(msg)
+        print('note on!')
+    elif last_value > midi_thresh and this_value <= midi_thresh:
+        # send note off
+        msg = mido.Message('note_off', channel=midi_channel, note=note, velocity=midi_vel)
+        port.send(msg)
+        print('note off!')
 
 
 while cap.isOpened():
@@ -67,11 +101,20 @@ while cap.isOpened():
     else:
         hand_value = 0
         # Create and send midi cc message
-    cc = min(127, max(0, int(hand_value * 127)))
 
+    cc = min(127, max(0, int(hand_value * 127)))
     if MIDI == 'ON':
-        msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
-        port.send(msg)
+        if MIDI_MODE == 'NOTE':
+            # check if hand triggers. send if trigger is detected
+            check_hand_trigger(last_hand_value, hand_value, note=midi_note)
+
+            # Update value tracker for midi trigger
+            last_hand_value = hand_value
+
+        else:
+            # send CC message
+            msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
+            port.send(msg)
 
     # Display the predicted spread value
     frame = cv2.flip(frame, 1)

@@ -1,10 +1,15 @@
+"""
+Model used for arm direction detection.
+First draft, based on response by chatgpt.
+To be optimised.
+"""
 import torch
 import torch.nn as nn
 
 class PoseGestureModel(nn.Module):
     def __init__(self):
         super(PoseGestureModel, self).__init__()
-        self.fc1 = nn.Linear(24, 32)
+        self.fc1 = nn.Linear(24, 32) # 8 input landmarks * 3 dimensions = 24 in features
         self.fc2 = nn.Linear(32, 32)
         self.fc3 = nn.Linear(32, 1)
 

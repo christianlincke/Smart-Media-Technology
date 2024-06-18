@@ -11,7 +11,6 @@ ARM = 'left'
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel.landmarkMask(ARM)
 
-
 # Directory to save the data to
 path = f'arm_direction_data_{ARM}/'
 
@@ -21,7 +20,7 @@ RECORD_TIME = 10
 # Define how many landmarks we have
 num_landmarks = len(landmark_mask)
 
-# Initialize MediaPipe Pose.
+# Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=True, min_detection_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
@@ -70,7 +69,7 @@ def calibrate_gesture(gesture_index, record_time):
         ret, frame = cap.read()
         if not ret:
             break
-        # gestures corresponging to 0 (center) , 2 (right) -2 (left)
+        # gestures corresponding to 0 (center) , 2 (right) -2 (left)
         gesture_name = ["center", "half right", "right", "left", "half left", ]
 
         # flip frame horizontally
