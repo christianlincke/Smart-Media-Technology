@@ -1,44 +1,27 @@
 import cv2
 import mediapipe as mp
-from Models import ArmModel
+from Models import ArmModel3D
 import numpy as np
 import time
 import csv
 
 # Which arm should be trained?
-ARM = 'left'  # or 'right'
-PARAM = 'stretch'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
+ARM = 'right'  # or 'right'
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 3
+RECORD_TIME = 10
 
-# define the indices for the different poses.
-if PARAM == 'direction':
-    # Direction data ist store between - 90° (left) and 90° (right). Indices -2 thru 2 are used
-    # negative values make the transition to a 360° model easier
-    target_values = [-0.5, -0.25, 0.0, 0.25, 0.5]
-    target_names = ["left", "50% left", "center", "50% left", "left", ]
-
-elif PARAM == 'stretch':
-    # stretch data is stored between fully stretched and fully bent. Indices 0 thru 4
-    target_values = [0.0, 0.25, 0.5, 0.75, 1.0]
-    target_names = ["100% bent", "75% bent", "50% bent", "25% bent", "100% stretched", ]
-
-elif PARAM == 'elevation':
-    raise ValueError("Not implemented yet.")
-
-elif PARAM == '360':
-    raise ValueError("Not implemented yet.")
-
-else:
-    raise ValueError("PARAM needs to be 'direction' on 'spread'")
+# Targets to be recorded
+# [[az, el], [..]]
+target_values = [[-0.5, 0.0], [-0.25, 0.0], [0.0, 0.0], [0.25, 0.0], [0.5, 0.0]]
+target_names = ['left/center', 'half-left/center', 'center/center', "half-right/center", "right/center", ]
 
 
 # Directory to save the data to
-path = f'TrainData/arm_{PARAM}_data_{ARM}/'
+path = f'TrainData/3D_data_{ARM}/'
 
 # assign mask to extract relevant landmarks
-landmark_mask = ArmModel.landmarkMask(ARM)
+landmark_mask = ArmModel3D.landmarkMask(ARM)
 # Define how many landmarks we have
 num_landmarks = len(landmark_mask)
 
@@ -128,41 +111,15 @@ date_time = time.asctime().replace(' ', '_')[4:] # return month_day_hh:mm:ss_yea
 date_time = date_time[-4:] + '_' + date_time[:-5] # turn into YYYY_MM_DD_hh:mm:ss
 
 # Save gesture data to CSV
-with open(path + f"arm_{PARAM}_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
+with open(path + f"3D_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['gesture'] + [f'[{i}]' for i in landmark_mask])
+    writer.writerow(['az'] + ['el'] + [f'[{i}]' for i in landmark_mask])
     for landmarks, gesture_label in all_samples:
-        row = [gesture_label] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
+        row = [gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
         writer.writerow(row)
 
 print("Calibration data saved successfully!")
 
-"""
-# Keep showing the screen
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
 
-    # Convert the BGR image to RGB.
-    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-    # Process the image and detect the hands.
-    results = pose.process(image)
-
-    # Draw hand landmarks.
-    if results.pose_landmarks:
-        mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-
-    frame = cv2.flip(frame, 1)
-    cv2.putText(frame, f"Data saved succesfully!. Press 'q' to quit", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-
-    cv2.imshow('Pose Gesture Recognition', frame)
-
-    if cv2.waitKey(5) & 0xFF == ord('q'):
-        break
-
-"""
 cap.release()
 cv2.destroyAllWindows()

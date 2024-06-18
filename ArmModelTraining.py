@@ -50,7 +50,7 @@ class PoseGestureDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 # Path to the directory containing the CSV files
-data_directory = f'arm_{PARAM}_data_{ARM}/'
+data_directory = f'TrainData/arm_{PARAM}_data_{ARM}/'
 
 # Get a list of all CSV files in the directory
 csv_files = glob.glob(data_directory + f'arm_{PARAM}_data_{ARM}_*.csv')

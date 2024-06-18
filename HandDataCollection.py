@@ -13,7 +13,7 @@ import time
 import csv
 
 # Directory to fsave the data to
-path = 'hand_data/'
+path = 'TrainData/hand_data/'
 
 # Global variable to set record time for each gesture in seconds
 RECORD_TIME = 10
