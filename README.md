@@ -2,6 +2,7 @@
 (Quasi) functioning Model to convert gestures to MIDI.
 
 #### main.py runs the hand & arm detection and outputs MIDI.
+## to use the stretch detetction, you will need to collect data first and thrain the model!
 
 Each detection is compromised of four scripts:
 
@@ -24,8 +25,5 @@ Script that converts the gestures to midi
 ### main.py
 Arm and Hand detection merged into a single script! At the beginning of the Script, the MIDI_MODE can be selected to send MIDI-CC o MIDI note-on. In the current Version, the arm values control the midi note and opening the hand triggers a note.
 
-##3D
+## 3D
 very basic but seems to work. data collection needs to be adjusted.
-
-## to use the stretch detetction, you will need to collect data first and thrain the model!
-
