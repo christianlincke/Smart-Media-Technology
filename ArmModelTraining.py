@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from Models import ArmModel
+import time
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
+from torch.utils.tensorboard import SummaryWriter
 import glob
-
-#from torch.utils.tensorboard import SummaryWriter
 
 # Which arm should be trained? 'left' or 'right'
 ARM = 'left'
@@ -21,7 +21,7 @@ learning_rate = 0.001
 batch_size = 32
 
 # Create writer for logging
-#writer = SummaryWriter(log_dir=f'runs/{time.asctime()}')
+writer = SummaryWriter(log_dir=f'runs/arms_{time.asctime()}')
 
 # Custom Dataset class for PyTorch
 class PoseGestureDataset(Dataset):
@@ -69,7 +69,13 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 # Training loop
 epoch_loss_train, epoch_loss_test = [], []  # store epoch loss
 epoch_acc_train, epoch_acc_test = [], [] # store epoch accuracy
+
+
 for epoch in range(num_epochs):
+    # reset list for target / prediction histograms every epoch
+    epoch_targets_train = torch.tensor([])
+    epoch_targets_test = torch.tensor([])
+    epoch_pred_test = torch.tensor([])
 
     #TRAIN
     model.train()
@@ -80,8 +86,8 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
 
-    epoch_loss_train.append(loss.item())
-    #writer.add_scalar('Loss/Train', loss.item(), epoch)
+    #epoch_loss_train.append(loss.item())
+    writer.add_scalar('Loss/Train', loss.item(), epoch)
 
     #TEST
     model.eval()
@@ -90,12 +96,19 @@ for epoch in range(num_epochs):
             outputs = model(inputs)
             loss = criterion(outputs, targets)
 
-        epoch_loss_test.append(loss.item())
-        #writer.add_scalar('Loss/Test', loss.item(), epoch)
+            epoch_pred_test = torch.cat((epoch_pred_test, outputs), 0)
+            epoch_targets_test = torch.cat((epoch_targets_test, targets), 0)
 
-    # Print the loss every 10 epochs
+        #epoch_loss_test.append(loss.item())
+        writer.add_scalar('Loss/Test', loss.item(), epoch)
+
+    # Logs every 10 epochs
     if (epoch + 1) % 10 == 0:
         print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+        # log a histogram of all targets/predictions
+        writer.add_histogram('Targets/Test', epoch_targets_test, epoch)
+        writer.add_histogram('Predictions/Test', epoch_pred_test, epoch)
 
 # Save the trained model
 save_path = f'Models/'
