@@ -9,8 +9,15 @@ from sklearn.model_selection import train_test_split
 from torch.utils.tensorboard import SummaryWriter
 import glob
 
-# Which arm should be trained? 'left' or 'right'
-ARM = 'left'
+# Which arm should be trained?
+ARM = 'right'  # or 'right'
+PARAM = 'stretch'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
+
+if PARAM != 'stretch' and PARAM != 'direction':
+    raise ValueError("PARAM needs to be 'stretch' or 'direction'")
+
+if ARM != 'left' and ARM != 'right':
+    raise ValueError("ARM needs to be 'left' or 'right'")
 
 # Number of landmarks to be used
 num_landmarks = len(ArmModel.landmarkMask(ARM))
@@ -21,7 +28,7 @@ learning_rate = 0.001
 batch_size = 32
 
 # Create writer for logging
-writer = SummaryWriter(log_dir=f'runs/arms_{time.asctime()}')
+writer = SummaryWriter(log_dir=f'runs/arms_{PARAM}_{ARM}_{time.asctime()}')
 
 # Custom Dataset class for PyTorch
 class PoseGestureDataset(Dataset):
@@ -43,10 +50,10 @@ class PoseGestureDataset(Dataset):
         return self.X[idx], self.y[idx]
 
 # Path to the directory containing the CSV files
-data_directory = f'arm_direction_data_{ARM}/'
+data_directory = f'arm_{PARAM}_data_{ARM}/'
 
 # Get a list of all CSV files in the directory
-csv_files = glob.glob(data_directory + f'arm_direction_data_{ARM}_*.csv')
+csv_files = glob.glob(data_directory + f'arm_{PARAM}_data_{ARM}_*.csv')
 
 # Read and concatenate all CSV files into a single DataFrame
 data_frames = [pd.read_csv(file) for file in csv_files]
@@ -112,7 +119,7 @@ for epoch in range(num_epochs):
 
 # Save the trained model
 save_path = f'Models/'
-torch.save(model.state_dict(), save_path + f'arm_direction_model_{ARM}.pth')
+torch.save(model.state_dict(), save_path + f'arm_{PARAM}_model_{ARM}.pth')
 print("Model training completed and saved.")
 
 """landmarks, labels = next(iter(train_loader))

@@ -6,17 +6,39 @@ import time
 import csv
 
 # Which arm should be trained?
-ARM = 'left'
+ARM = 'left'  # or 'right'
+PARAM = 'stretch'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
+
+# Global variable to set record time for each gesture in seconds
+RECORD_TIME = 3
+
+# define the indices for the different poses.
+if PARAM == 'direction':
+    # Direction data ist store between - 90° (left) and 90° (right). Indices -2 thru 2 are used
+    # negative values make the transition to a 360° model easier
+    target_values = [-0.5, -0.25, 0.0, 0.25, 0.5]
+    target_names = ["left", "50% left", "center", "50% left", "left", ]
+
+elif PARAM == 'stretch':
+    # stretch data is stored between fully stretched and fully bent. Indices 0 thru 4
+    target_values = [0.0, 0.25, 0.5, 0.75, 1.0]
+    target_names = ["100% bent", "75% bent", "50% bent", "25% bent", "100% stretched", ]
+
+elif PARAM == 'elevation':
+    raise ValueError("Not implemented yet.")
+
+elif PARAM == '360':
+    raise ValueError("Not implemented yet.")
+
+else:
+    raise ValueError("PARAM needs to be 'direction' on 'spread'")
+
+
+# Directory to save the data to
+path = f'arm_{PARAM}_data_{ARM}/'
 
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel.landmarkMask(ARM)
-
-# Directory to save the data to
-path = f'arm_direction_data_{ARM}/'
-
-# Global variable to set record time for each gesture in seconds
-RECORD_TIME = 10
-
 # Define how many landmarks we have
 num_landmarks = len(landmark_mask)
 
@@ -29,7 +51,7 @@ mp_drawing = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(0)
 
 # Function to capture landmarks for a set duration
-def record_landmarks(duration, pose_label):
+def record_landmarks(duration, target):
     start_time = time.time()
     landmarks_list = []
 
@@ -48,13 +70,13 @@ def record_landmarks(duration, pose_label):
         if results.pose_landmarks:
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             landmarks = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark])
-            landmarks_list.append((landmarks[landmark_mask], pose_label))
+            landmarks_list.append((landmarks[landmark_mask], target))
 
         # flip frame horizontally
         frame = cv2.flip(frame, 1)
         # Display the image with instructions.
         elapsed_time = time.time() - start_time
-        cv2.putText(frame, f"Recording {ARM} arm {pose_label}... {duration - int(elapsed_time)}s left. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        cv2.putText(frame, f"Recording {ARM} arm {target}... {duration - int(elapsed_time)}s left. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
         cv2.imshow('Pose Gesture Calibration', frame)
 
@@ -64,22 +86,27 @@ def record_landmarks(duration, pose_label):
     return landmarks_list
 
 # Data collection with automated recording
-def calibrate_gesture(gesture_index, record_time):
+def calibrate_gesture(target, gesture_name, record_time):
+    """
+
+    :param target: float pose target value
+    :param gesture_name: str pose name
+    :param record_time: int recording time
+    :return: landmarks list of recorded lanmarks
+    """
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        # gestures corresponding to 0 (center) , 2 (right) -2 (left)
-        gesture_name = ["center", "half right", "right", "left", "half left", ]
 
         # flip frame horizontally
         frame = cv2.flip(frame, 1)
         # Display instructions
-        cv2.putText(frame, f"Show {ARM} arm {gesture_name[gesture_index]} and press 'r' to record. Press 'q' to quit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        cv2.putText(frame, f"Show {ARM} arm {gesture_name} and press 'r' to record. Press 'q' to quit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
         cv2.imshow('Pose Gesture recording', frame)
 
         if cv2.waitKey(5) & 0xFF == ord('r'):
-            landmarks = record_landmarks(record_time, gesture_index / 4)
+            landmarks = record_landmarks(record_time, target)
             cv2.destroyAllWindows()  # Close the current window before opening the next one
             return landmarks
 
@@ -88,22 +115,20 @@ def calibrate_gesture(gesture_index, record_time):
             cv2.destroyAllWindows()
             exit()
 
-# Recording samples
-center_samples = calibrate_gesture(0, RECORD_TIME)
-half_right_samples = calibrate_gesture(1, RECORD_TIME)
-right_samples = calibrate_gesture(2, RECORD_TIME)
-left_closed_samples = calibrate_gesture(-2, RECORD_TIME)
-half_left_samples = calibrate_gesture(-1, RECORD_TIME)
+# define empty array to save the data
+all_samples = []
 
-# Combine all samples for calibration and training
-all_samples = center_samples + half_right_samples + right_samples + left_closed_samples + half_left_samples
+# RECORD SAMPLES
+for idx in range(len(target_values)):
+    current_samples = calibrate_gesture(target_values[idx], target_names[idx], RECORD_TIME)
+    all_samples = all_samples + current_samples
 
 # Get timestamp for save file name
 date_time = time.asctime().replace(' ', '_')[4:] # return month_day_hh:mm:ss_year
 date_time = date_time[-4:] + '_' + date_time[:-5] # turn into YYYY_MM_DD_hh:mm:ss
 
 # Save gesture data to CSV
-with open(path + f"arm_direction_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
+with open(path + f"arm_{PARAM}_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['gesture'] + [f'[{i}]' for i in landmark_mask])
     for landmarks, gesture_label in all_samples:
@@ -112,6 +137,7 @@ with open(path + f"arm_direction_data_{ARM}_{date_time}.csv", 'w', newline='') a
 
 print("Calibration data saved successfully!")
 
+"""
 # Keep showing the screen
 while cap.isOpened():
     ret, frame = cap.read()
@@ -137,5 +163,6 @@ while cap.isOpened():
     if cv2.waitKey(5) & 0xFF == ord('q'):
         break
 
+"""
 cap.release()
 cv2.destroyAllWindows()
