@@ -7,14 +7,16 @@
 Each detection is compromised of four scripts:
 
 #### ___DataCollection.py 
-Collects data by recording landmarks for several different target  gestures. Input device is webcam. Data is saved as csv file
+Collects data by recording landmarks for several different target  gestures. Input device is webcam. Data is saved as csv file.
+
 Hand data collection is straight forward.
-For arm data collection, you need to select the hand (left/right) and the parameter (direction/stretch) you want to record.
+For arm data collection, you need to select the hand (left/right) and the parameter (direction/stretch) you want to record at the beginning of the script.
 
 #### ___ModelTraining.py
-Trains the Model with all acquired data. After training, weights are stored in /Models/___model.pth
+Trains the Model with all acquired data. After training, weights are stored in /Models/___model.pth.
+
 Hand Model training is straight forward.
-For arm Model Training, you need to select the hand (left/right) and the parameter (direction/stretch) you want to train.
+For arm Model Training, you need to select the hand (left/right) and the parameter (direction/stretch) you want to train at the beginning of the script.
 
 #### Models/___Model.py
 The actual NN with definitions for the Layers etc.
