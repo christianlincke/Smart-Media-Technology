@@ -10,17 +10,14 @@ from torch.utils.tensorboard import SummaryWriter
 import glob
 
 # Which arm should be trained?
-ARM = 'right'  # or 'right'
-PARAM = 'stretch'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
+ARM = 'left'  # or 'right'
+PARAM = 'direction'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
 
 if PARAM != 'stretch' and PARAM != 'direction':
     raise ValueError("PARAM needs to be 'stretch' or 'direction'")
 
 if ARM != 'left' and ARM != 'right':
     raise ValueError("ARM needs to be 'left' or 'right'")
-
-# Number of landmarks to be used
-num_landmarks = len(ArmModel.landmarkMask(ARM))
 
 #### HYPERPARAMETERS ###
 num_epochs = 100
@@ -51,6 +48,7 @@ class PoseGestureDataset(Dataset):
 
 # Path to the directory containing the CSV files
 data_directory = f'TrainData/arm_{PARAM}_data_{ARM}/'
+#data_directory = f'TrainData/test/' # for testing # here for testing
 
 # Get a list of all CSV files in the directory
 csv_files = glob.glob(data_directory + f'arm_{PARAM}_data_{ARM}_*.csv')
@@ -58,6 +56,19 @@ csv_files = glob.glob(data_directory + f'arm_{PARAM}_data_{ARM}_*.csv')
 # Read and concatenate all CSV files into a single DataFrame
 data_frames = [pd.read_csv(file) for file in csv_files]
 data = pd.concat(data_frames, ignore_index=True)
+print('raw: ', type(data))
+
+# Extract relevant landmarks from concatenated files
+# first, turn landmark mask into list of strings for column name indexing
+rel_columns = [str(col_idx) for col_idx in ArmModel.landmarkMask(ARM)]
+label = ['gesture'] # known column name for label
+
+# we want label + landmarks, so we concatenate the column names:
+all_columns = label + rel_columns
+data = data[all_columns] # indexing the pd Dataframe
+
+# Number of landmarks to be used
+num_landmarks = len(ArmModel.landmarkMask(ARM))
 
 # Split the data into training and testing sets
 train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
@@ -69,7 +80,7 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Initialize the model, loss function and optimizer
-model = ArmModel.PoseGestureModel()
+model = ArmModel.PoseGestureModel(in_feat=num_landmarks)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -120,24 +131,10 @@ for epoch in range(num_epochs):
 # Save the trained model
 save_path = f'Models/'
 torch.save(model.state_dict(), save_path + f'arm_{PARAM}_model_{ARM}.pth')
+#torch.save(model.state_dict(), save_path + f'test.pth') # here for testing
 print("Model training completed and saved.")
 
-"""landmarks, labels = next(iter(train_loader))
+landmarks, labels = next(iter(train_loader))
 writer.add_graph(model, landmarks)
-
-writer.add_hparams({"training files": str(csv_files),
-                    "num samples": train_dataset.__len__(),
-                    "epochs": num_epochs,
-                    "batch size": batch_size,
-                    "learning rate": learning_rate},
-                   {"loss": loss.item()})
 writer.flush()
 writer.close()
-"""
-"""
-Run this from terminal to start Tensorboard:
-
-tensorboard --logdir=runs
-
-Note: Safari won't open the page, you need chrome/firefox...!
-"""

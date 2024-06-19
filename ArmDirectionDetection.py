@@ -15,6 +15,7 @@ PARAM = 'direction' # 'stretch' or 'direction'
 
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel.landmarkMask(ARM)
+num_landmarks = len(landmark_mask)
 
 # define midi port
 if MIDI == 'ON':
@@ -22,7 +23,7 @@ if MIDI == 'ON':
 
 # Initialize the model
 model_path = 'Models/'
-model = ArmModel.PoseGestureModel()
+model = ArmModel.PoseGestureModel(in_feat=num_landmarks)
 model.load_state_dict(torch.load(model_path + f'arm_{PARAM}_model_{ARM}.pth'))
 model.eval()
 
