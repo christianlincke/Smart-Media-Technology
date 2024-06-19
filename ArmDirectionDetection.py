@@ -72,7 +72,7 @@ while cap.isOpened():
             direction_value = prediction.item()
 
         # Display the predicted spread value
-        #print(f"Predicted spread value: {spread_value}")
+        #print(f"Predicted direction value: {direction_value}")
     else:
         direction_value = 0
 

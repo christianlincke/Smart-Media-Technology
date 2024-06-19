@@ -14,7 +14,7 @@ RECORD_TIME = 3
 
 # define the indices for the different poses.
 if PARAM == 'direction':
-    # Direction data ist store between - 90° (left) and 90° (right). Indices -2 thru 2 are used
+    # Direction data is stored between - 90° (left) and 90° (right)
     # negative values make the transition to a 360° model easier
     target_values = [-0.5, -0.25, 0.0, 0.25, 0.5]
     target_names = ["left", "50% left", "center", "50% right", "right", ]
@@ -22,7 +22,7 @@ if PARAM == 'direction':
 elif PARAM == 'stretch':
     # stretch data is stored between fully stretched and fully bent. Indices 0 thru 4
     target_values = [0.0, 0.25, 0.5, 0.75, 1.0]
-    target_names = ["100% bent", "75% bent", "50% bent", "25% bent", "100% stretched", ]
+    target_names = ["100% bent", "75% bent", "50% bent", "75% straight", "100% straight", ]
 
 elif PARAM == 'elevation':
     raise ValueError("Not implemented yet.")
@@ -36,14 +36,8 @@ else:
 
 # Directory to save the data to
 path = f'TrainData/arm_{PARAM}_data_{ARM}/'
-#path = 'TrainData/test/'
 
-# assign mask to extract relevant landmarks
-#landmark_mask = ArmModel.landmarkMask(ARM)
-# Define how many landmarks we have
-#num_landmarks = len(landmark_mask)
-
-# use all landmarks for recording
+# Define how many landmarks we're using
 num_landmarks = 33
 
 # Initialize MediaPipe Pose
@@ -74,8 +68,7 @@ def record_landmarks(duration, target):
         if results.pose_landmarks:
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             landmarks = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark])
-            #landmarks_list.append((landmarks[landmark_mask], target)) # old, only stores selected landmarks
-            landmarks_list.append((landmarks, target)) # new, we want to store all landmarks
+            landmarks_list.append((landmarks, target))
 
         # flip frame horizontally
         frame = cv2.flip(frame, 1)
@@ -135,7 +128,6 @@ date_time = date_time[-4:] + '_' + date_time[:-5] # turn into YYYY_MM_DD_hh:mm:s
 # Save gesture data to CSV
 with open(path + f"arm_{PARAM}_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
     writer = csv.writer(file)
-    #writer.writerow(['gesture'] + [f'[{i}]' for i in landmark_mask])
     writer.writerow(['gesture'] + [i for i in range(num_landmarks)])
     for landmarks, gesture_label in all_samples:
         row = [gesture_label] + [f'{x},{y},{z}' for (x, y, z) in landmarks]

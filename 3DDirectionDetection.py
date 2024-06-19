@@ -5,15 +5,17 @@ from Models import ArmModel3D
 import mido
 
 # Output MIDI? 'ON' / 'OFF'
-MIDI = 'OFF' # Turn Midi Output 'ON' or 'OFF'
+MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
 midi_channel = 1 # MIDI Output Channel
-midi_control = 2 # MIDI CC Message
+midi_control_az = 1 # MIDI CC
+midi_control_el = 2 # MIDI CC
 
 # Which arm should be detected? 'left' or 'right'
 ARM = 'right'
 
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel3D.landmarkMask(ARM)
+num_landmarks = len(landmark_mask)
 
 # define midi port
 if MIDI == 'ON':
@@ -21,7 +23,7 @@ if MIDI == 'ON':
 
 # Initialize the model
 model_path = 'Models/'
-model = ArmModel3D.PoseGestureModel()
+model = ArmModel3D.PoseGestureModel(in_feat=num_landmarks)
 model.load_state_dict(torch.load(model_path + f'3D_model_{ARM}.pth'))
 model.eval()
 
@@ -67,23 +69,29 @@ while cap.isOpened():
         # Predict the gesture.
         with torch.no_grad():
             prediction = model(input_tensor)
-            direction_value = prediction #.item()
+            direction_value = prediction[0] #.item()
 
         # Display the predicted spread value
         #print(f"Predicted spread value: {spread_value}")
     else:
-        direction_value = 0
+        direction_value = [0.0, 0.0]
 
 
     # send midi cc message
     if MIDI == 'ON':
-        cc = min(127, max(0, int((direction_value + 0.5) * 127)))
-        msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
-        port.send(msg)
+        cc_az = min(127, max(0, int((direction_value[0] + 0.5) * 127)))
+        cc_el = min(127, max(0, int((direction_value[1] + 0.5) * 127)))
+        msg_az = mido.Message('control_change', channel=midi_channel, control=midi_control_az, value=cc_az)
+        msg_el = mido.Message('control_change', channel=midi_channel, control=midi_control_el, value=cc_el)
+        port.send(msg_az)
+        port.send(msg_el)
+    else:
+        cc_az = 'off'
+        cc_el = 'off'
 
     # Flip & Display the image.
     frame = cv2.flip(frame, 1)
-    cv2.putText(frame, f"Gesture Value: {direction_value}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"Azimuth: {direction_value[0]:.2f} CC: {cc_az} Elevation: {direction_value[1]:.2f} CC: {cc_el}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.putText(frame, f"Direction Detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.imshow('Pose Gesture Recognition', frame)
 

@@ -1,7 +1,7 @@
 """
-perform both hand spread and arm direction detection.
-Select which arm should be detected in line 13.
-17.06.2024
+perform both hand spread and arm direction or stretch detection.
+Selection of arm, parameter, and midi setup can be done at the beginning of the script
+last change: 19.06.2024 by christian
 """
 import cv2
 import mediapipe as mp
@@ -15,10 +15,10 @@ PARAM = 'direction' # 'stretch' or 'direction'
 
 # Define Midi stuff
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
-MIDI_MODE = 'NOTE' # or 'NOTE'
+MIDI_MODE = 'NOTE' # 'CC' or 'NOTE'
 midi_channel = 1 # MIDI Output Channel
 midi_control_hand = 1 # MIDI CC Message, if MIDI_MODE 'CC' is configured
-midi_control_dir = 1 # MIDI CC Message, if MIDI_MODE 'CC' is configured
+midi_control_dir = 2 # MIDI CC Message, if MIDI_MODE 'CC' is configured
 midi_note = 60 # MIDI Note to be send
 midi_vel = 100 # MIDI velocity
 midi_thresh = 0.5 # threshold at which the note triggers
@@ -32,14 +32,14 @@ if MIDI == 'ON':
 if MIDI_MODE == 'NOTE':
     last_hand_value = 0
 
-
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel.landmarkMask(ARM)
+num_landmarks_arm = len(landmark_mask)
 
 # Initialize the models
 model_path = 'Models/'
 # Arm direction model
-arm_model = ArmModel.PoseGestureModel()     # Arm Model
+arm_model = ArmModel.PoseGestureModel(in_feat=num_landmarks_arm)     # Arm Model
 arm_model.load_state_dict(torch.load(model_path + f'arm_{PARAM}_model_{ARM}.pth'))
 arm_model.eval()
 # Hand spread model

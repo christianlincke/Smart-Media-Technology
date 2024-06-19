@@ -48,7 +48,6 @@ class PoseGestureDataset(Dataset):
 
 # Path to the directory containing the CSV files
 data_directory = f'TrainData/arm_{PARAM}_data_{ARM}/'
-#data_directory = f'TrainData/test/' # for testing # here for testing
 
 # Get a list of all CSV files in the directory
 csv_files = glob.glob(data_directory + f'arm_{PARAM}_data_{ARM}_*.csv')
@@ -56,19 +55,21 @@ csv_files = glob.glob(data_directory + f'arm_{PARAM}_data_{ARM}_*.csv')
 # Read and concatenate all CSV files into a single DataFrame
 data_frames = [pd.read_csv(file) for file in csv_files]
 data = pd.concat(data_frames, ignore_index=True)
-print('raw: ', type(data))
 
 # Extract relevant landmarks from concatenated files
-# first, turn landmark mask into list of strings for column name indexing
-rel_columns = [str(col_idx) for col_idx in ArmModel.landmarkMask(ARM)]
+# first, get the landmark mask and turn into list of strings for column name indexing
+landmark_mask = ArmModel.landmarkMask(ARM)
+data_columns = [str(col_idx) for col_idx in landmark_mask]
 label = ['gesture'] # known column name for label
 
 # we want label + landmarks, so we concatenate the column names:
-all_columns = label + rel_columns
-data = data[all_columns] # indexing the pd Dataframe
+rel_columns = label + data_columns
+
+# indexing the pd Dataframe, only keeps the relevant columns
+data = data[rel_columns]
 
 # Number of landmarks to be used
-num_landmarks = len(ArmModel.landmarkMask(ARM))
+num_landmarks = len(landmark_mask)
 
 # Split the data into training and testing sets
 train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
@@ -85,10 +86,6 @@ criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 # Training loop
-epoch_loss_train, epoch_loss_test = [], []  # store epoch loss
-epoch_acc_train, epoch_acc_test = [], [] # store epoch accuracy
-
-
 for epoch in range(num_epochs):
     # reset list for target / prediction histograms every epoch
     epoch_targets_train = torch.tensor([])
@@ -104,7 +101,6 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
 
-    #epoch_loss_train.append(loss.item())
     writer.add_scalar('Loss/Train', loss.item(), epoch)
 
     #TEST
@@ -117,7 +113,6 @@ for epoch in range(num_epochs):
             epoch_pred_test = torch.cat((epoch_pred_test, outputs), 0)
             epoch_targets_test = torch.cat((epoch_targets_test, targets), 0)
 
-        #epoch_loss_test.append(loss.item())
         writer.add_scalar('Loss/Test', loss.item(), epoch)
 
     # Logs every 10 epochs
@@ -131,7 +126,6 @@ for epoch in range(num_epochs):
 # Save the trained model
 save_path = f'Models/'
 torch.save(model.state_dict(), save_path + f'arm_{PARAM}_model_{ARM}.pth')
-#torch.save(model.state_dict(), save_path + f'test.pth') # here for testing
 print("Model training completed and saved.")
 
 landmarks, labels = next(iter(train_loader))

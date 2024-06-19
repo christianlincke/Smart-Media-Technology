@@ -12,9 +12,6 @@ import glob
 # Which arm should be trained?
 ARM = 'right'  # 'left' or 'right'
 
-# Number of landmarks to be used
-num_landmarks = len(ArmModel3D.landmarkMask(ARM))
-
 #### HYPERPARAMETERS ###
 num_epochs = 100
 learning_rate = 0.001
@@ -53,6 +50,21 @@ csv_files = glob.glob(data_directory + f'3D_data_{ARM}_*.csv')
 data_frames = [pd.read_csv(file) for file in csv_files]
 data = pd.concat(data_frames, ignore_index=True)
 
+# Extract relevant landmarks from concatenated files
+# first, get the landmark mask and turn into list of strings for column name indexing
+landmark_mask = ArmModel3D.landmarkMask(ARM)
+data_columns = [str(col_idx) for col_idx in landmark_mask]
+label = ['az', 'el']  # known column names for labels
+
+# we want label + landmarks, so we concatenate the column names:
+rel_columns = label + data_columns
+
+# indexing the pd Dataframe, only keeps the relevant columns
+data = data[rel_columns]
+
+# Number of landmarks to be used
+num_landmarks = len(landmark_mask)
+
 # Split the data into training and testing sets
 train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
 
@@ -62,19 +74,12 @@ test_dataset = PoseGestureDataset(test_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-#single_sample = next(iter(train_loader))
-#print(single_sample)
-#quit()
 # Initialize the model, loss function and optimizer
-model = ArmModel3D.PoseGestureModel()
+model = ArmModel3D.PoseGestureModel(in_feat=num_landmarks)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 # Training loop
-epoch_loss_train, epoch_loss_test = [], []  # store epoch loss
-epoch_acc_train, epoch_acc_test = [], [] # store epoch accuracy
-
-
 for epoch in range(num_epochs):
     # reset list for target / prediction histograms every epoch
     epoch_targets_train = torch.tensor([])
@@ -83,14 +88,13 @@ for epoch in range(num_epochs):
 
     #TRAIN
     model.train()
-    for inputs, targets in train_loader: ## stuff needs to be done here to be able to fit two labels
+    for inputs, targets in train_loader:
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
 
-    #epoch_loss_train.append(loss.item())
     writer.add_scalar('Loss/Train', loss.item(), epoch)
 
     #TEST
@@ -103,7 +107,6 @@ for epoch in range(num_epochs):
             epoch_pred_test = torch.cat((epoch_pred_test, outputs), 0)
             epoch_targets_test = torch.cat((epoch_targets_test, targets), 0)
 
-        #epoch_loss_test.append(loss.item())
         writer.add_scalar('Loss/Test', loss.item(), epoch)
 
     # Logs every 10 epochs

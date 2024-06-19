@@ -6,24 +6,31 @@ import time
 import csv
 
 # Which arm should be trained?
-ARM = 'right'  # or 'right'
+ARM = 'right'  # 'left' or 'right'
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 10
+RECORD_TIME = 3
 
 # Targets to be recorded
 # [[az, el], [..]]
-target_values = [[-0.5, 0.0], [-0.25, 0.0], [0.0, 0.0], [0.25, 0.0], [0.5, 0.0]]
-target_names = ['left/center', 'half-left/center', 'center/center', "half-right/center", "right/center", ]
+target_values = [[-0.5, 0.0],   [-0.25, 0.0],   [0.0, 0.0],     [0.25, 0.0],    [0.5, 0.0],
+                 [-0.5, 0.25],  [-0.25, 0.25],  [0.0, 0.25],    [0.25, 0.25],   [0.5, 0.25],
+                 [-0.5, -0.25], [-0.25, -0.25], [0.0, -0.25],   [0.25, -0.25],  [0.5, -0.25],
+                 [0.0, 0.5],    [0.0, -0.5]
+                 ]
+
+target_names = ['90° left / 0°',        '45° left /  0°',       '0° / 0°',          '45° right / 0°',       '90° right / 0°',
+                '90° left / 45° up',    '45° left /  45° up',   '0° / 45° up',      '45° right / 45° up',   '90° right / 45° up',
+                '90° left / 45° down',  '45° left /  45° down', '0° / 45° down',    '45° right / 45° down', '90° right / 45° down',
+                '90° up',               '90° down'
+                ]
 
 
 # Directory to save the data to
 path = f'TrainData/3D_data_{ARM}/'
 
-# assign mask to extract relevant landmarks
-landmark_mask = ArmModel3D.landmarkMask(ARM)
-# Define how many landmarks we have
-num_landmarks = len(landmark_mask)
+# Define how many landmarks we're using
+num_landmarks = 33
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
@@ -53,7 +60,7 @@ def record_landmarks(duration, target):
         if results.pose_landmarks:
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             landmarks = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark])
-            landmarks_list.append((landmarks[landmark_mask], target))
+            landmarks_list.append((landmarks, target))
 
         # flip frame horizontally
         frame = cv2.flip(frame, 1)
@@ -113,13 +120,12 @@ date_time = date_time[-4:] + '_' + date_time[:-5] # turn into YYYY_MM_DD_hh:mm:s
 # Save gesture data to CSV
 with open(path + f"3D_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['az'] + ['el'] + [f'[{i}]' for i in landmark_mask])
+    writer.writerow(['az'] + ['el'] + [i for i in range(num_landmarks)])
     for landmarks, gesture_label in all_samples:
         row = [gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
         writer.writerow(row)
 
 print("Calibration data saved successfully!")
-
 
 cap.release()
 cv2.destroyAllWindows()

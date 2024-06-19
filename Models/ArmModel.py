@@ -9,7 +9,7 @@ import torch.nn as nn
 class PoseGestureModel(nn.Module):
     def __init__(self, in_feat):
         super(PoseGestureModel, self).__init__()
-        self.fc1 = nn.Linear(in_feat * 3, 32) # in_feat (num_landmarks) * 3 dimensions
+        self.fc1 = nn.Linear(in_feat * 3, 32)  # in_feat (num_landmarks) * 3 dimensions
         self.fc2 = nn.Linear(32, 32)
         self.fc3 = nn.Linear(32, 1)
 
