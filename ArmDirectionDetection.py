@@ -1,3 +1,6 @@
+"""
+evaluates arm direction or stretch and outputs values via midi
+"""
 import cv2
 import mediapipe as mp
 import torch

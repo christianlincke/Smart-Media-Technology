@@ -1,7 +1,7 @@
 """
-perform both hand spread and arm direction or stretch detection.
-Selection of arm, parameter, and midi setup can be done at the beginning of the script
-last change: 19.06.2024 by christian
+perform 3d-direction, spread and hand detection for one arm
+arm selection midi setup can be done at the beginning of the script
+last change: 24.06.2024 by christian
 """
 import cv2
 import mediapipe as mp

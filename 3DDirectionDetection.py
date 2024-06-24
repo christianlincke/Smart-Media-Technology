@@ -1,3 +1,6 @@
+"""
+performs detection of 3d arm direction and outputs data as MIDI
+"""
 import cv2
 import mediapipe as mp
 import torch
