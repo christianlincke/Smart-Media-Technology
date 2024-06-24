@@ -38,20 +38,22 @@ if MIDI_MODE == 'NOTE':
     last_hand_value = 0
 
 # assign mask to extract relevant landmarks
-landmark_mask = ArmModel.landmarkMask(ARM)
-num_landmarks_arm = len(landmark_mask)
+landmarkMaskStretch = ArmModel.landmarkMask(ARM)
+numLandmarksStretch = len(landmarkMaskStretch)
+
+landmarkMaskDir = ArmModel3D.landmarkMask(ARM)
+numLandmarksDir = len(landmarkMaskDir)
 
 # Initialize the models
 model_path = 'Models/'
 
 # Arm 3D direction model
-model_direction = ArmModel3D.PoseGestureModel(in_feat=num_landmarks_arm)     # Arm Model
+model_direction = ArmModel3D.PoseGestureModel(in_feat=numLandmarksStretch)     # Arm Model
 model_direction.load_state_dict(torch.load(model_path + f'3D_model_{ARM}.pth'))
 model_direction.eval()
 # Arm stretch model
-model_stretch = ArmModel.PoseGestureModel(in_feat=num_landmarks_arm)     # Arm Model
-#model_stretch.load_state_dict(torch.load(model_path + f'arm_stretch_model_{ARM}.pth'))
-model_stretch.load_state_dict(torch.load(model_path + f'arm_direction_model_{ARM}.pth'))
+model_stretch = ArmModel.PoseGestureModel(in_feat=numLandmarksDir)     # Arm Model
+model_stretch.load_state_dict(torch.load(model_path + f'arm_stretch_model_{ARM}.pth'))
 model_stretch.eval()
 # Hand spread model
 model_hand = HandModel.HandGestureModel()   # Hand Model
@@ -71,17 +73,25 @@ mp_drawing = mp.solutions.drawing_utils
 # Capture video from webcam.
 cap = cv2.VideoCapture(0)
 
-def arm_landmarks_coordinates(input_landmarks):
+def landmarks_to_coordinates_stretch(input_landmarks):
     coordinates = []
 
-    for i in landmark_mask:
+    for i in landmarkMaskStretch:
         landmark = input_landmarks.landmark[i]
         coordinates.extend([landmark.x, landmark.y, landmark.z])
 
     return coordinates
 
+def landmarks_to_coordinates_direction(input_landmarks):
+    coordinates = []
 
-def hand_landmarks_coordinates(input_landmarks):
+    for i in landmarkMaskDir:
+        landmark = input_landmarks.landmark[i]
+        coordinates.extend([landmark.x, landmark.y, landmark.z])
+
+    return coordinates
+
+def landmarks_to_coordinates_hand(input_landmarks):
     coordinates = []
 
     for landmark in input_landmarks.landmark:
@@ -111,7 +121,6 @@ def check_hand_trigger(last_value, this_value, note):
             port.send(msg)
         print('note off!')
 
-
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
@@ -129,17 +138,19 @@ while cap.isOpened():
         mp_drawing.draw_landmarks(frame, pose_results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
         # Get the landmark coordinates.
-        pose_landmarks_conv = arm_landmarks_coordinates(pose_results.pose_landmarks)
+        landmarks_conv_stretch = landmarks_to_coordinates_stretch(pose_results.pose_landmarks)
+        landmarks_conv_dir = landmarks_to_coordinates_direction(pose_results.pose_landmarks)
 
         # Convert the landmarks to a tensor.
-        input_tensor = torch.tensor(pose_landmarks_conv, dtype=torch.float32).unsqueeze(0)
+        input_tensor_stretch = torch.tensor(landmarks_conv_stretch, dtype=torch.float32).unsqueeze(0)
+        input_tensor_dir = torch.tensor(landmarks_conv_dir, dtype=torch.float32).unsqueeze(0)
 
         # Predict stretch
         with torch.no_grad():
-            prediction_stretch = model_stretch(input_tensor)
+            prediction_stretch = model_stretch(input_tensor_stretch)
             value_stretch = prediction_stretch.item()
 
-            prediction_direction = model_direction(input_tensor)
+            prediction_direction = model_direction(input_tensor_dir)
             value_direction = prediction_direction[0] # .item()
 
         # Display the predicted spread value
@@ -154,14 +165,14 @@ while cap.isOpened():
             mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
             # Get the landmark coordinates.
-            hand_landmarks_conv = hand_landmarks_coordinates(hand_landmarks)
+            hand_landmarks_conv = landmarks_to_coordinates_hand(hand_landmarks)
 
             # Convert the landmarks to a tensor.
-            input_tensor = torch.tensor(hand_landmarks_conv, dtype=torch.float32).unsqueeze(0)
+            input_tensor_hand = torch.tensor(hand_landmarks_conv, dtype=torch.float32).unsqueeze(0)
 
             # Predict the gesture.
             with torch.no_grad():
-                prediction_hand = model_hand(input_tensor)
+                prediction_hand = model_hand(input_tensor_hand)
                 value_hand = prediction_hand.item()
     else:
         value_hand = 0
@@ -172,7 +183,7 @@ while cap.isOpened():
         if MIDI_MODE == 'NOTE':
             # send midi note (stretch) when hand triggers
             midi_val_hand = int(min(1.999, max(0, int(value_hand * 2)))) # convert hand spread to (0, 1)
-            midi_val_stretch = int(min(72, max(60, (value_stretch + 0.5) * dir_scale_factor + 60)))
+            midi_val_stretch = int(min(72, max(60, value_stretch * dir_scale_factor + 60)))
 
             # check if hand triggers. send if trigger is detected
             check_hand_trigger(last_hand_value, value_hand, note=midi_val_stretch)
@@ -183,7 +194,7 @@ while cap.isOpened():
         else:
             # send cc messages for hand and arm
             midi_val_hand = min(127, max(0, int(value_hand * 127))) # conver hand spread to midi range
-            midi_val_stretch = min(127, max(0, int((value_stretch + 0.5) * 127))) # convers direction to midi range
+            midi_val_stretch = min(127, max(0, int(value_stretch * 127))) # convers direction to midi range
             msg_hand = mido.Message('control_change', channel=midi_channel, control=midi_control_hand, value=midi_val_hand)
             msg_stretch = mido.Message('control_change', channel=midi_channel, control=midi_control_stretch, value=midi_val_stretch)
             port.send(msg_hand)
