@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 #writer = SummaryWriter(log_dir=f'runs/arms_3D_{ARM}_{time.asctime()}')
 
 # Path to the directory containing the CSV files
-path = f'TrainData/'
+path = f'../TrainData/'
 dir_list = os.listdir(path)
 
 print('Available directories: \n')
