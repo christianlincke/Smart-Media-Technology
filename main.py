@@ -6,7 +6,7 @@ last change: 19.06.2024 by christian
 import cv2
 import mediapipe as mp
 import torch
-from Models import ArmModel, HandModel
+from Models import ArmModel, ArmModel3D, HandModel
 import mido
 
 # Which arm should be detected? 'left' or 'right' #
@@ -38,6 +38,7 @@ num_landmarks_arm = len(landmark_mask)
 
 # Initialize the models
 model_path = 'Models/'
+
 # Arm direction model
 arm_model = ArmModel.PoseGestureModel(in_feat=num_landmarks_arm)     # Arm Model
 arm_model.load_state_dict(torch.load(model_path + f'arm_{PARAM}_model_{ARM}.pth'))
