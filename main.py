@@ -24,10 +24,10 @@ midi_control_stretch = 2 # MIDI CC Message, if MIDI_MODE 'CC' is configured
 midi_control_az = 3
 midi_control_el = 4
 
-midi_note = 60 # MIDI Note to be send
+midi_note = 60 # MIDI Note to be send, currently not used
 midi_vel = 100 # MIDI velocity
-midi_thresh = 0.5 # threshold at which the note triggers
-dir_scale_factor = 14 # Factor to scale left - right range to one octave, only if MIDI_MODE 'NOTE'
+midi_thresh = 0.5 # threshold at which the note triggers, only used if MIDI_MODE is 'NOTE'
+dir_scale_factor = 14 # Factor to scale to one octave, only used if MIDI_MODE is 'NOTE'
 
 # define midi port
 if MIDI == 'ON':
