@@ -11,14 +11,19 @@ import mido
 
 # Which arm should be detected? 'left' or 'right' #
 ARM = 'right' # 'left' or 'right'
-PARAM = 'direction' # 'stretch' or 'direction'
 
 # Define Midi stuff
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
-MIDI_MODE = 'NOTE' # 'CC' or 'NOTE'
+MIDI_MODE = 'CC' # 'CC' or 'NOTE'
 midi_channel = 1 # MIDI Output Channel
+
 midi_control_hand = 1 # MIDI CC Message, if MIDI_MODE 'CC' is configured
-midi_control_dir = 2 # MIDI CC Message, if MIDI_MODE 'CC' is configured
+midi_control_stretch = 2 # MIDI CC Message, if MIDI_MODE 'CC' is configured
+
+# set midi controls for azimuth and elevation
+midi_control_az = 3
+midi_control_el = 4
+
 midi_note = 60 # MIDI Note to be send
 midi_vel = 100 # MIDI velocity
 midi_thresh = 0.5 # threshold at which the note triggers
@@ -39,14 +44,19 @@ num_landmarks_arm = len(landmark_mask)
 # Initialize the models
 model_path = 'Models/'
 
-# Arm direction model
-arm_model = ArmModel.PoseGestureModel(in_feat=num_landmarks_arm)     # Arm Model
-arm_model.load_state_dict(torch.load(model_path + f'arm_{PARAM}_model_{ARM}.pth'))
-arm_model.eval()
+# Arm 3D direction model
+model_direction = ArmModel3D.PoseGestureModel(in_feat=num_landmarks_arm)     # Arm Model
+model_direction.load_state_dict(torch.load(model_path + f'3D_model_{ARM}.pth'))
+model_direction.eval()
+# Arm stretch model
+model_stretch = ArmModel.PoseGestureModel(in_feat=num_landmarks_arm)     # Arm Model
+#model_stretch.load_state_dict(torch.load(model_path + f'arm_stretch_model_{ARM}.pth'))
+model_stretch.load_state_dict(torch.load(model_path + f'arm_direction_model_{ARM}.pth'))
+model_stretch.eval()
 # Hand spread model
-hand_model = HandModel.HandGestureModel()   # Hand Model
-hand_model.load_state_dict(torch.load('Models/hand_gesture_model.pth'))
-hand_model.eval()
+model_hand = HandModel.HandGestureModel()   # Hand Model
+model_hand.load_state_dict(torch.load('Models/hand_gesture_model.pth'))
+model_hand.eval()
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
@@ -114,7 +124,7 @@ while cap.isOpened():
     pose_results = pose.process(image)
     hand_results = hands.process(image)
 
-    # Get arm direction prediction and draw landmarks.
+    # Get arm stretch prediction and draw landmarks.
     if pose_results.pose_landmarks:
         mp_drawing.draw_landmarks(frame, pose_results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
@@ -124,15 +134,19 @@ while cap.isOpened():
         # Convert the landmarks to a tensor.
         input_tensor = torch.tensor(pose_landmarks_conv, dtype=torch.float32).unsqueeze(0)
 
-        # Predict the gesture.
+        # Predict stretch
         with torch.no_grad():
-            direction_prediction = arm_model(input_tensor)
-            direction_value = direction_prediction.item()
+            prediction_stretch = model_stretch(input_tensor)
+            value_stretch = prediction_stretch.item()
+
+            prediction_direction = model_direction(input_tensor)
+            value_direction = prediction_direction[0] # .item()
 
         # Display the predicted spread value
         # print(f"Predicted spread value: {spread_value}")
     else:
-        direction_value = 0
+        value_stretch = 0
+        value_direction = [0, 0]
 
     # Get hand spread prediction and draw landmarks
     if hand_results.multi_hand_landmarks:
@@ -147,40 +161,51 @@ while cap.isOpened():
 
             # Predict the gesture.
             with torch.no_grad():
-                hand_prediction = hand_model(input_tensor)
-                hand_value = hand_prediction.item()
+                prediction_hand = model_hand(input_tensor)
+                value_hand = prediction_hand.item()
     else:
-        hand_value = 0
+        value_hand = 0
 
-
+    # process raw data and generate MIDI messages
     if MIDI == 'ON':
+
         if MIDI_MODE == 'NOTE':
-            # send midi note (direction) when hand triggers
-            midi_val_hand = int(min(1.999, max(0, int(hand_value * 2)))) # convert hand spread to (0, 1)
-            midi_val_arm = int(min(72, max(60, (direction_value + 0.5) * dir_scale_factor + 60)))
+            # send midi note (stretch) when hand triggers
+            midi_val_hand = int(min(1.999, max(0, int(value_hand * 2)))) # convert hand spread to (0, 1)
+            midi_val_stretch = int(min(72, max(60, (value_stretch + 0.5) * dir_scale_factor + 60)))
 
             # check if hand triggers. send if trigger is detected
-            check_hand_trigger(last_hand_value, hand_value, note=midi_val_arm)
+            check_hand_trigger(last_hand_value, value_hand, note=midi_val_stretch)
 
             # Update value tracker for midi trigger
-            last_hand_value = hand_value
+            last_hand_value = value_hand
 
         else:
             # send cc messages for hand and arm
-            midi_val_hand = min(127, max(0, int(hand_value * 127))) # conver hand spread to midi range
-            midi_val_arm = min(127, max(0, int((direction_value + 0.5) * 127))) # convers direction to midi range
+            midi_val_hand = min(127, max(0, int(value_hand * 127))) # conver hand spread to midi range
+            midi_val_stretch = min(127, max(0, int((value_stretch + 0.5) * 127))) # convers direction to midi range
             msg_hand = mido.Message('control_change', channel=midi_channel, control=midi_control_hand, value=midi_val_hand)
-            msg_arm = mido.Message('control_change', channel=midi_channel, control=midi_control_dir, value=midi_val_arm)
+            msg_stretch = mido.Message('control_change', channel=midi_channel, control=midi_control_stretch, value=midi_val_stretch)
             port.send(msg_hand)
-            port.send(msg_arm)
+            port.send(msg_stretch)
+
+        # always send azimuth and elevation data as CCs
+        midi_val_az = min(127, max(0, int((value_direction[0] + 0.5) * 127)))
+        midi_val_el = min(127, max(0, int((value_direction[1] + 0.5) * 127)))
+        msg_az = mido.Message('control_change', channel=midi_channel, control=midi_control_az, value=midi_val_az)
+        msg_el = mido.Message('control_change', channel=midi_channel, control=midi_control_el, value=midi_val_el)
+        port.send(msg_az)
+        port.send(msg_el)
 
     # Flip & Display the image.
     frame = cv2.flip(frame, 1)
     cv2.putText(frame, f"{ARM} Hand and Arm detection. Press 'q' to quit.", (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-    cv2.putText(frame, f"Hand Value: {hand_value:.2f} CC : {midi_val_hand}", (10, 60),
+    cv2.putText(frame, f"Hand: {value_hand:.2f} CC : {midi_val_hand}", (10, 60),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-    cv2.putText(frame, f"Dir Value: {direction_value:.2f} CC : {midi_val_arm}", (10, 90),
+    cv2.putText(frame, f"Stretch: {value_stretch:.2f} CC : {midi_val_stretch}", (10, 90),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"AZ: {value_direction[0]:.2f} CC : {midi_val_az} EL : {value_direction[1]:.2f} CC : {midi_val_el}", (10, 120),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.imshow('Pose Gesture Recognition', frame)
 
