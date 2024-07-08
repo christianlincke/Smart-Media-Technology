@@ -9,7 +9,7 @@ import csv
 ARM = 'right'  # 'left' or 'right'
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 3
+RECORD_TIME = 7
 
 # Targets to be recorded
 # [[az, el], [..]]

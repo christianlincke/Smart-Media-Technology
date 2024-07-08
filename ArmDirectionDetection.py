@@ -8,13 +8,13 @@ from Models import ArmModel
 import mido
 
 # Output MIDI? 'ON' / 'OFF'
-MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
+MIDI = 'OFF' # Turn Midi Output 'ON' or 'OFF'
 midi_channel = 1 # MIDI Output Channel
 midi_control = 2 # MIDI CC Message
 
 # Which arm should be detected? 'left' or 'right'
-ARM = 'left'
-PARAM = 'direction' # 'stretch' or 'direction'
+ARM = 'right'
+PARAM = 'stretch' # 'stretch' or 'direction'
 
 # assign mask to extract relevant landmarks
 landmark_mask = ArmModel.landmarkMask(ARM)

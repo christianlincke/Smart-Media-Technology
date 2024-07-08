@@ -10,8 +10,8 @@ from torch.utils.tensorboard import SummaryWriter
 import glob
 
 # Which arm should be trained?
-ARM = 'left'  # or 'right'
-PARAM = 'direction'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
+ARM = 'right'  # or 'right'
+PARAM = 'stretch'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
 
 if PARAM != 'stretch' and PARAM != 'direction':
     raise ValueError("PARAM needs to be 'stretch' or 'direction'")
@@ -51,6 +51,7 @@ data_directory = f'TrainData/arm_{PARAM}_data_{ARM}/'
 
 # Get a list of all CSV files in the directory
 csv_files = glob.glob(data_directory + f'arm_{PARAM}_data_{ARM}_*.csv')
+print(list(csv_files))
 
 # Read and concatenate all CSV files into a single DataFrame
 data_frames = [pd.read_csv(file) for file in csv_files]

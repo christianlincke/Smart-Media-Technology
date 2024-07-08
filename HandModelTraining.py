@@ -124,11 +124,11 @@ print("Model training completed and saved.")
 landmarks, labels = next(iter(train_loader))
 writer.add_graph(model, landmarks)
 
-writer.add_hparams({"training files": str(csv_files),
+"""writer.add_hparams({"training files": str(csv_files),
                     "num samples": train_dataset.__len__(),
                     "epochs": num_epochs,
                     "batch size": batch_size,
                     "learning rate": learning_rate},
                    {"loss": loss.item()})
 writer.flush()
-writer.close()
+writer.close()"""

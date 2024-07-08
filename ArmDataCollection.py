@@ -6,11 +6,11 @@ import time
 import csv
 
 # Which arm should be trained?
-ARM = 'left'  # or 'right'
+ARM = 'right'  # or 'right'
 PARAM = 'stretch'  # 'direction' or 'stretch' -- later there might be elevation / '360' as well --
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 3
+RECORD_TIME = 10
 
 # define the indices for the different poses.
 if PARAM == 'direction':

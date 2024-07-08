@@ -15,7 +15,7 @@ ARM = 'right' # 'left' or 'right'
 # Define Midi stuff
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
 MIDI_MODE = 'CC' # 'CC' or 'NOTE'
-midi_channel = 1 # MIDI Output Channel
+midi_channel = 0 # MIDI Output Channel
 
 midi_control_hand = 1 # MIDI CC Message, if MIDI_MODE 'CC' is configured
 midi_control_stretch = 2 # MIDI CC Message, if MIDI_MODE 'CC' is configured
@@ -211,13 +211,13 @@ while cap.isOpened():
     # Flip & Display the image.
     frame = cv2.flip(frame, 1)
     cv2.putText(frame, f"{ARM} Hand and Arm detection. Press 'q' to quit.", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
     cv2.putText(frame, f"Hand: {value_hand:.2f} CC : {midi_val_hand}", (10, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
     cv2.putText(frame, f"Stretch: {value_stretch:.2f} CC : {midi_val_stretch}", (10, 90),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
     cv2.putText(frame, f"AZ: {value_direction[0]:.2f} CC : {midi_val_az} EL : {value_direction[1]:.2f} CC : {midi_val_el}", (10, 120),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
     cv2.imshow('Pose Gesture Recognition', frame)
 
     if cv2.waitKey(5) & 0xFF == ord('q'):
