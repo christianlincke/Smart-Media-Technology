@@ -104,6 +104,7 @@ all_samples = full_closed_samples + quarter_closed_samples + half_closed_samples
 # better way to name files - avoids merge conflicts
 # (unless multiple people happen to do training at the exact same second)
 date_time = time.asctime().replace(" ", "_")
+date_time = date_time.replace(":", "_")
 
 # Save gesture data to CSV
 with open(path + f'hand_gesture_data_{date_time}.csv', 'w', newline='') as file:
