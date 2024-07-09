@@ -21,7 +21,7 @@ import glob
 
 # Which arm should be trained?
 ARM = 'right'  # 'left' or 'right'
-PARAM = 'hand' # 'stretch' or 'dir'
+PARAM = 'dir' # 'stretch' or 'dir' or 'hand'
 
 # Custom Dataset class for PyTorch
 class PoseGestureDataset(Dataset):
@@ -170,6 +170,8 @@ class Trainer:
         self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False)
 
+        self.num_samples = train_dataset.__len__()
+
     def loop(self):
         """
         run the train and test loops
@@ -216,7 +218,7 @@ class Trainer:
         # save trained model
 
         # log to tb
-        self.log()
+        # self.log()
 
     @staticmethod
     def augment_data(in_data):
@@ -252,7 +254,7 @@ class Trainer:
         self.writer.add_graph(self.model, landmarks)
 
         self.writer.add_hparams({"training files": str(self.csv_files),
-                                 "num samples": self.train_dataset.__len__(),
+                                 "num samples": self.num_samples,
                                  "epochs": self.num_epochs,
                                  "batch size": self.batch_size,
                                  "learning rate": self.learning_rate})

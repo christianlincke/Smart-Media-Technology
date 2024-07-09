@@ -17,18 +17,30 @@ NUM_HANDS = 2
 # Define Midi stuff
 MIDI = 'ON'  # Turn Midi Output 'ON' or 'OFF'
 MIDI_MODE = 'CC'  # 'CC' or 'NOTE'
-midi_channel = 1  # MIDI Output Channel
+MIDI_CHANNEL = 1  # MIDI Output Channel
+MIDI_CONTROLS = {"hand_left":       0,
+                 "stretch_left":    1,
+                 "az_left":         2,
+                 "el_left":         3,
+                 "hand_right":      4,
+                 "stretch_right":   5,
+                 "az_right":        6,
+                 "el_right":        7
+                 }
 
-midi_control_hand = 1  # MIDI CC Message, if MIDI_MODE 'CC' is configured
-midi_control_stretch = 2  # MIDI CC Message, if MIDI_MODE 'CC' is configured
-
-# set midi controls for azimuth and elevation
-midi_control_az = 3
-midi_control_el = 4
+MIDI_MAPPINGS = {"hand_left":       ((0, 1), (1, 127)),
+                 "stretch_left":    ((0, 1), (1, 127)),
+                 "az_left":         ((-0.5, 0.5), (1, 127)),
+                 "el_left":         ((-0.5, 0.5), (1, 127)),
+                 "hand_right":      ((0, 1), (1, 127)),
+                 "stretch_right":   ((0, 1), (1, 127)),
+                 "az_right":        ((-0.5, 0.5), (1, 127)),
+                 "el_right":        ((-0.5, 0.5), (1, 127))
+                 }
 
 midi_note = 60  # MIDI Note to be sent, currently not used
 midi_vel = 100  # MIDI velocity
-midi_thresh = 0.5  # threshold at which the note triggers, only used if MIDI_MODE is 'NOTE'
+MIDI_THRESH = 0.5  # threshold at which the note triggers, only used if MIDI_MODE is 'NOTE'
 dir_scale_factor = 14  # Factor to scale to one octave, only used if MIDI_MODE is 'NOTE'
 
 # define midi port
@@ -56,6 +68,10 @@ class Detector:
         self.frame = None
 
         # init detection values
+        # utility
+        self.value_names = ["hand_right", "stretch_right", "az_right", "el_right",
+                       "hand_left", "stretch_left", "az_left", "el_left"]
+
         self.values_raw = {"hand_left": 0, "stretch_left": 0, "az_left": 0, "el_left": 0,
                            "hand_right": 0, "stretch_right": 0, "az_right": 0, "el_right": 0}
 
@@ -171,16 +187,16 @@ class Detector:
         :return:
         """
 
-        if self.values_prev[param] < midi_thresh and self.values_raw[param] >= midi_thresh:
+        if self.values_prev[param] < MIDI_THRESH and self.values_raw[param] >= MIDI_THRESH:
             # send Note On
-            msg = mido.Message('note_on', channel=midi_channel, note=note, velocity=midi_vel)
+            msg = mido.Message('note_on', channel=MIDI_CHANNEL, note=note, velocity=midi_vel)
             port.send(msg)
             print('note on!')
-        elif self.values_prev[param] > midi_thresh and self.values_raw[param] <= midi_thresh:
+        elif self.values_prev[param] > MIDI_THRESH and self.values_raw[param] <= MIDI_THRESH:
             # send note off
             # to avoid notes getting stuck, we send note for all 127 notes. not elegant, to be optimized
             for n in range(128):
-                msg = mido.Message('note_off', channel=midi_channel, note=n, velocity=midi_vel)
+                msg = mido.Message('note_off', channel=MIDI_CHANNEL, note=n, velocity=midi_vel)
                 port.send(msg)
             print('note off!')
 
@@ -287,6 +303,29 @@ class Detector:
         self.cap.release()
         cv2.destroyAllWindows()
 
+    def map_values(self):
+        """
+        convert values from raw range to midi range
+        y = m * x + b
+
+        :return:
+        """
+        for val in self.value_names:
+            # get ranges
+            from_min = MIDI_MAPPINGS[val][0][0]
+            from_max = MIDI_MAPPINGS[val][0][1]
+            to_min = MIDI_MAPPINGS[val][1][0]
+            to_max = MIDI_MAPPINGS[val][1][1]
+
+            # calculate factor
+            m = (to_max - to_min) / (from_max - from_min)
+            # calculate offset
+            b = to_min - (from_min * m)
+            result = (m * self.values_raw[val]) + b
+
+            # restrict range and convert to int
+            self.values_midi[val] = int(min(to_max, max(to_min, result)))
+
     def send_midi(self):
         """
         convert values to MIDI range
@@ -307,26 +346,15 @@ class Detector:
             # Update value tracker for midi trigger
             self.values_prev = self.values_raw
 
-        else:
-            # send cc messages for hand and arm
-            self.values_midi["hand_right"] = min(127, max(0, int(self.values_raw["hand_right"] * 127)))
-            self.values_midi["stretch_right"] = min(127, max(0, int(self.values_raw["stretch_right"] * 127)))
-            msg_hand = mido.Message('control_change', channel=midi_channel, control=midi_control_hand,
-                                    value=self.values_midi["hand_right"])
-            msg_stretch = mido.Message('control_change', channel=midi_channel, control=midi_control_stretch,
-                                       value=self.values_midi["stretch_right"])
-            port.send(msg_hand)
-            port.send(msg_stretch)
+        # always send CCs
+        # map raw values to 0..127
+        self.map_values()
 
-        # always send azimuth and elevation data as CCs
-        self.values_midi["az_right"] = min(127, max(0, int((self.values_raw["az_right"] + 0.5) * 127)))
-        self.values_midi["el_right"] = min(127, max(0, int((self.values_raw["el_right"] + 0.5) * 127)))
-        msg_az = mido.Message('control_change', channel=midi_channel, control=midi_control_az,
-                              value=self.values_midi["az_right"])
-        msg_el = mido.Message('control_change', channel=midi_channel, control=midi_control_el,
-                              value=self.values_midi["el_right"])
-        port.send(msg_az)
-        port.send(msg_el)
+        # send messages
+        for val in self.value_names:
+            msg = mido.Message('control_change', channel=MIDI_CHANNEL, control=MIDI_CONTROLS[val],
+                               value=self.values_midi[val])
+            port.send(msg)
 
     def show_image(self):
         """
