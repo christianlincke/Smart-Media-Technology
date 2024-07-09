@@ -9,7 +9,7 @@ import csv
 ARM = 'right'  # 'left' or 'right'
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 3
+RECORD_TIME = 5
 
 # Targets to be recorded
 # [[az, el], [..]]
@@ -114,7 +114,7 @@ for idx in range(len(target_values)):
     all_samples = all_samples + current_samples
 
 # Get timestamp for save file name
-date_time = time.asctime().replace(' ', '_')[4:] # return month_day_hh:mm:ss_year
+date_time = time.asctime().replace(' ', '_').replace(':', '')[4:] # return month_day_hh:mm:ss_year
 date_time = date_time[-4:] + '_' + date_time[:-5] # turn into YYYY_MM_DD_hh:mm:ss
 
 # Save gesture data to CSV

@@ -27,8 +27,8 @@ if MIDI_MODE == 'NOTE':
     last_hand_value = 0
 
 # Initialize the model
-model = HandModel.HandGestureModel()
-model.load_state_dict(torch.load('Models/hand_gesture_model.pth'))
+model = HandModel.GestureModel(in_feat=21)
+model.load_state_dict(torch.load('Models/hand_model.pth'))
 model.eval()
 
 # Initialize MediaPipe Hands.

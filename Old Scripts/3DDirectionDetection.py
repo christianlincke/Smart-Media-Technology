@@ -1,23 +1,23 @@
 """
-evaluates arm direction or stretch and outputs values via midi
+performs detection of 3d arm direction and outputs data as MIDI
 """
 import cv2
 import mediapipe as mp
 import torch
-from Models import ArmModel
+from Models import ArmModel3D
 import mido
 
 # Output MIDI? 'ON' / 'OFF'
 MIDI = 'ON' # Turn Midi Output 'ON' or 'OFF'
 midi_channel = 1 # MIDI Output Channel
-midi_control = 2 # MIDI CC Message
+midi_control_az = 1 # MIDI CC
+midi_control_el = 2 # MIDI CC
 
 # Which arm should be detected? 'left' or 'right'
-ARM = 'left'
-PARAM = 'direction' # 'stretch' or 'direction'
+ARM = 'right'
 
 # assign mask to extract relevant landmarks
-landmark_mask = ArmModel.landmarkMask(ARM)
+landmark_mask = ArmModel3D.landmarkMask(ARM)
 num_landmarks = len(landmark_mask)
 
 # define midi port
@@ -25,9 +25,9 @@ if MIDI == 'ON':
     port = mido.open_output('IAC-Treiber Bus 1')
 
 # Initialize the model
-model_path = 'Models/'
-model = ArmModel.PoseGestureModel(in_feat=num_landmarks)
-model.load_state_dict(torch.load(model_path + f'arm_{PARAM}_model_{ARM}.pth'))
+model_path = '../Models/'
+model = ArmModel3D.GestureModel(in_feat=num_landmarks)
+model.load_state_dict(torch.load(model_path + f'dir_model_{ARM}.pth'))
 model.eval()
 
 # Initialize MediaPipe Pose
@@ -72,24 +72,30 @@ while cap.isOpened():
         # Predict the gesture.
         with torch.no_grad():
             prediction = model(input_tensor)
-            direction_value = prediction.item()
+            direction_value = prediction[0] #.item()
 
         # Display the predicted spread value
-        #print(f"Predicted direction value: {direction_value}")
+        #print(f"Predicted spread value: {spread_value}")
     else:
-        direction_value = 0
+        direction_value = [0.0, 0.0]
 
 
     # send midi cc message
-    cc = min(127, max(0, int((direction_value + 0.5) * 127)))
     if MIDI == 'ON':
-        msg = mido.Message('control_change', channel=midi_channel, control=midi_control, value=cc)
-        port.send(msg)
+        cc_az = min(127, max(0, int((direction_value[0] + 0.5) * 127)))
+        cc_el = min(127, max(0, int((direction_value[1] + 0.5) * 127)))
+        msg_az = mido.Message('control_change', channel=midi_channel, control=midi_control_az, value=cc_az)
+        msg_el = mido.Message('control_change', channel=midi_channel, control=midi_control_el, value=cc_el)
+        port.send(msg_az)
+        port.send(msg_el)
+    else:
+        cc_az = 'off'
+        cc_el = 'off'
 
     # Flip & Display the image.
     frame = cv2.flip(frame, 1)
-    cv2.putText(frame, f"Gesture Value: {direction_value:.2f} CC : {cc}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-    cv2.putText(frame, f"{PARAM} Detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"Azimuth: {direction_value[0]:.2f} CC: {cc_az} Elevation: {direction_value[1]:.2f} CC: {cc_el}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+    cv2.putText(frame, f"Direction Detection. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
     cv2.imshow('Pose Gesture Recognition', frame)
 
     if cv2.waitKey(5) & 0xFF == ord('q'):

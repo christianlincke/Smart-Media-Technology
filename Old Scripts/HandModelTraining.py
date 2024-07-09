@@ -118,7 +118,7 @@ for epoch in range(num_epochs):
         writer.add_histogram('Predictions/Test', epoch_pred_test, epoch)
 
 # Save the trained model
-torch.save(model.state_dict(), 'Models/hand_gesture_model.pth')
+torch.save(model.state_dict(), '../Models/hand_gesture_model.pth')
 print("Model training completed and saved.")
 
 landmarks, labels = next(iter(train_loader))

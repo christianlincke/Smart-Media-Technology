@@ -103,12 +103,12 @@ all_samples = full_closed_samples + quarter_closed_samples + half_closed_samples
 
 # better way to name files - avoids merge conflicts
 # (unless multiple people happen to do training at the exact same second)
-date_time = time.asctime().replace(" ", "_")
+date_time = time.asctime().replace(" ", "_").replace(':', '')
 
 # Save gesture data to CSV
 with open(path + f'hand_gesture_data_{date_time}.csv', 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['gesture'] + [f'[{i}]' for i in range(21)])
+    writer.writerow(['gesture'] + [f'{i}' for i in range(21)])
     for landmarks, gesture_label in all_samples:
         row = [gesture_label] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
         writer.writerow(row)
