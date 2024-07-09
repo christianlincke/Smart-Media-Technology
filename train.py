@@ -55,6 +55,11 @@ class PoseGestureDataset(Dataset):
 class Trainer:
 
     def __init__(self, param, side):
+        """
+        initalize Class
+        :param param: str "hand", "stretch" or "dir"
+        :param side: str "left" or "right"
+        """
 
         self.param = param
         self.side = side
@@ -85,12 +90,19 @@ class Trainer:
         self.load_data()
 
     def set_hprams(self):
-
+        """
+        define hyperparameters
+        :return:
+        """
         self.num_epochs = 100
         self.learning_rate = 0.001
         self.batch_size = 32
 
     def __init_tb(self):
+        """
+        init tensorboard
+        :return:
+        """
         # Create writer for logging
         if self.param == 'hand':
             self.writer = SummaryWriter(log_dir=f'runs/hand_{time.asctime()}')
@@ -98,6 +110,10 @@ class Trainer:
             self.writer = SummaryWriter(log_dir=f'runs/{self.param}_{self.side}_{time.asctime()}')
 
     def __init_models(self):
+        """
+        init model to be trained
+        :return:
+        """
 
         # first, get the landmark mask and turn into list of strings for column name indexing
         self.landmark_mask = self.model_file.landmarkMask(self.side)
@@ -110,6 +126,10 @@ class Trainer:
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def load_data(self):
+        """
+        load all recorded data for the selected param and side
+        :return:
+        """
         # Path to the directory containing the CSV files
         if self.param == 'hand':
             data_directory = f'TrainData/hand_data/'
@@ -118,7 +138,10 @@ class Trainer:
 
         # Get a list of all CSV files in the directory
         self.csv_files = glob.glob(data_directory + f'*.csv')
-        print(list(self.csv_files))
+        print(f"Found {len(list(self.csv_files))} files!")
+        for f in list(self.csv_files):
+            print(f)
+
 
         # Read and concatenate all CSV files into a single DataFrame
         data_frames = [pd.read_csv(file) for file in self.csv_files]
@@ -133,6 +156,11 @@ class Trainer:
         # indexing the pd Dataframe, only keeps the relevant columns
         data = data[rel_columns]
 
+        # data augmentation
+        data_aug = self.augment_data(data)
+
+        # TODO append augmented data
+
         # Split the data into training and testing sets
         train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
 
@@ -143,7 +171,10 @@ class Trainer:
         self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False)
 
     def loop(self):
-
+        """
+        run the train and test loops
+        :return:
+        """
         # Training loop
         for epoch in range(self.num_epochs):
             # reset list for target / prediction histograms every epoch
@@ -183,10 +214,28 @@ class Trainer:
                 self.writer.add_histogram('Predictions/Test', epoch_pred_test, epoch)
 
         # save trained model
-        # self.save_model()
 
         # log to tb
-        # self.log()
+        self.log()
+
+    @staticmethod
+    def augment_data(in_data):
+        """
+        Perform data augmentation on the landmark data.
+        Data is stored as landmarks (x,y,z), so we need to implement custom augmentations
+
+        augmentation is performed after relevant landmarks are extracted - see load_data()
+
+        ideas: mirror x, rescale, distort ...
+
+        :param in_data: pd.DataFrame dataset to be augmented
+        :return: augmented dataset
+        """
+        # TODO implement augmentation method
+
+        # placeholder, return last data sample
+        return in_data[4]
+
 
     def save_model(self):
         # Save the trained model
