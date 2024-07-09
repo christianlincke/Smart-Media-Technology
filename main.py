@@ -9,10 +9,14 @@ import torch
 from Models import ArmModel, ArmModel3D, HandModel
 import mido
 import copy
+from google.protobuf.json_format import MessageToDict
 
-# Which arm should be detected? 'left' or 'right' #
+# Which arm should be detected? 'left' or 'right'
 ARM = 'right'  # 'left' or 'right' or 'both'
-NUM_HANDS = 2
+
+# left and right hand are reversed for some reason.
+# Until we figure out why, this will fix it.
+FLIP_HANDS = True
 
 # Define Midi stuff
 MIDI = 'ON'  # Turn Midi Output 'ON' or 'OFF'
@@ -43,6 +47,10 @@ midi_vel = 100  # MIDI velocity
 MIDI_THRESH = 0.5  # threshold at which the note triggers, only used if MIDI_MODE is 'NOTE'
 dir_scale_factor = 14  # Factor to scale to one octave, only used if MIDI_MODE is 'NOTE'
 
+# set color and font for on screen text
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+FONTCOLOR = (0, 255, 255)
+
 # define midi port
 if MIDI == 'ON':
     port = mido.open_output('IAC-Treiber Bus 1')
@@ -57,12 +65,16 @@ class Detector:
         # list for sides to detect
         if sides.lower() == "left":
             self.sides = ["left"]
+            num_hands = 1
         elif sides.lower() == "right":
             self.sides = ["right"]
+            num_hands = 1
         elif sides.lower() == "both":
             self.sides = ["left", "right"]
+            num_hands = 2
         else:
             raise ValueError(f"sides must be 'left', 'right' or 'both', not {sides}")
+
 
         # init variables
         self.frame = None
@@ -70,7 +82,7 @@ class Detector:
         # init detection values
         # utility
         self.value_names = ["hand_right", "stretch_right", "az_right", "el_right",
-                       "hand_left", "stretch_left", "az_left", "el_left"]
+                            "hand_left", "stretch_left", "az_left", "el_left"]
 
         self.values_raw = {"hand_left": 0, "stretch_left": 0, "az_left": 0, "el_left": 0,
                            "hand_right": 0, "stretch_right": 0, "az_right": 0, "el_right": 0}
@@ -88,12 +100,12 @@ class Detector:
         self.__init_models()
 
         # initialize mediapipe
-        self.__init_mp()
+        self.__init_mp(num_hands)
 
         # Capture video from webcam.
         self.cap = cv2.VideoCapture(0)
 
-    def __init_mp(self):
+    def __init_mp(self, num_hands):
         """
         initialize MediaPipe objects
         :return:
@@ -105,7 +117,7 @@ class Detector:
 
         # Initialize MediaPipe Hands
         self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(static_image_mode=False, max_num_hands=NUM_HANDS, min_detection_confidence=0.5)
+        self.hands = self.mp_hands.Hands(static_image_mode=False, max_num_hands=num_hands, min_detection_confidence=0.5)
 
         # init drawings
         self.mp_drawing = mp.solutions.drawing_utils
@@ -239,14 +251,30 @@ class Detector:
         :param hand_results: mp landmarks
         :return:
         """
+        # dict to swap "left" and "right"
+        swap = {"left": "right", "right": "left"}
 
-        for hand_landmarks in hand_results.multi_hand_landmarks:
+        # dict to store, which side has which index
+        side_indexes = {0: None, 1: None}
+
+        # iterate detected hands
+        for idx, hand_landmarks in enumerate(hand_results.multi_hand_landmarks):
+
+            # flip left and right
+            if FLIP_HANDS:
+                side_indexes[idx] = swap[hand_results.multi_handedness[idx].classification[0].label.lower()]
+            else:
+                side_indexes[idx] = hand_results.multi_handedness[idx].classification[0].label.lower()
+
+            # skip iteration if hand should not be detected
+            if side_indexes[idx] not in self.sides:
+                continue
+
+            # draw landmarks
             self.mp_drawing.draw_landmarks(self.frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
 
             # Get the landmark coordinates
-            # "hand_left" is only needed because a few for loops make use of hand_left and hand_right,
-            # even if the landmarks masks are the same
-            hand_landmarks_conv = self.landmarks_to_coordinates(hand_landmarks, "hand_left")
+            hand_landmarks_conv = self.landmarks_to_coordinates(hand_landmarks, f"hand_{side_indexes[idx]}")
 
             # Convert the landmarks to a tensor.
             input_tensor_hand = torch.tensor(hand_landmarks_conv, dtype=torch.float32).unsqueeze(0)
@@ -254,7 +282,12 @@ class Detector:
             # Predict the gesture.
             with torch.no_grad():
                 prediction_hand = self.models["hand"](input_tensor_hand)
-                self.values_raw["hand_right"] = prediction_hand.item()
+                self.values_raw[f"hand_{side_indexes[idx]}"] = prediction_hand.item()
+
+        # set values for hands that aren't detetcted to 0
+        for side in ["left", "right"]:
+            if side_indexes[0] != side and side_indexes[1] != side:
+                self.values_raw[f"hand_{side}"] = 0
 
     def run(self):
         """
@@ -278,16 +311,17 @@ class Detector:
             if pose_results.pose_landmarks:
                 self.eval_pose(pose_results)
             else:
-                self.values_raw["stretch_right"] = 0
-                self.values_raw["az_right"] = 0
-                self.values_raw["el_right"] = 0
+                for side in self.sides:
+                    self.values_raw[f"stretch_{side}"] = 0
+                    self.values_raw[f"az_{side}"] = 0
+                    self.values_raw[f"el_{side}"] = 0
 
             # Get hand spread prediction and draw landmarks
             if hand_results.multi_hand_landmarks:
-                # print(hand_results.multi_handedness[0]['label'])
                 self.eval_hands(hand_results)
             else:
                 self.values_raw["hand_right"] = 0
+                self.values_raw["hand_left"] = 0
 
             # process raw data and generate MIDI messages
             if MIDI == 'ON':
@@ -362,23 +396,17 @@ class Detector:
         :return:
         """
         # Flip & Display the image.
-        frame = cv2.flip(self.frame, 1)
+        frame_flip = cv2.flip(self.frame, 1)
 
-        cv2.putText(frame, f"{ARM} Hand and Arm detection. Press 'q' to quit.", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-        cv2.putText(frame, f"Hand: {self.values_raw['hand_right']:.2f} "
-                           f"CC : {self.values_midi['hand_right']}", (10, 60),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-        cv2.putText(frame, f"Stretch: {self.values_raw['stretch_right']:.2f} "
-                           f"CC : {self.values_midi['stretch_right']}", (10, 90),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-        cv2.putText(frame,
-                    f"AZ: {self.values_raw['az_right']:.2f} CC : {self.values_midi['az_right']} "
-                    f"EL : {self.values_raw['el_right']:.2f} CC : {self.values_midi['el_right']}",
-                    (10, 120),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        cv2.putText(frame_flip, f"Hand and Arm detection. Press 'q' to quit.", (10, 30), FONT, 1, FONTCOLOR, 2)
 
-        cv2.imshow('Pose Gesture Recognition', frame)
+        # print all values
+        for idx, val in enumerate(self.value_names):
+            pos = 30 * (idx+1) + 30
+            cv2.putText(frame_flip, f"{val}:  {self.values_raw[val]:.2f}  {self.values_midi[val]:03d}",
+                        (10, pos), FONT, 1, FONTCOLOR, 2)
+
+        cv2.imshow('Pose Gesture Recognition', frame_flip)
 
 
 if __name__ == "__main__":
