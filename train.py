@@ -231,10 +231,10 @@ class Trainer:
         :param in_data: pd.DataFrame dataset to be augmented
         :return: augmented dataset
         """
-        # TODO implement augmentation method
+        # TODO implement augmentations
 
-        # placeholder, return last data sample
-        return in_data[4]
+        # placeholder
+        return None
 
 
     def save_model(self):
