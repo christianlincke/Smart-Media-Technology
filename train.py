@@ -9,6 +9,7 @@ Note: Safari won't open the page, you need chrome/firefox...!
 last change 9. Jul 2024 by Christian
 """
 import pandas as pd
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -18,23 +19,28 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 from torch.utils.tensorboard import SummaryWriter
 import glob
+import random
 
 # Which arm should be trained?
 ARM = 'right'  # 'left' or 'right'
-PARAM = 'dir' # 'stretch' or 'dir' or 'hand'
+PARAM = 'stretch' # 'stretch' or 'dir' or 'hand'
 
 # Custom Dataset class for PyTorch
 class PoseGestureDataset(Dataset):
     def __init__(self, data, num_landmarks, labels):
         self.labels = labels
+        self.num_landmarks = num_landmarks
+
         self.X = []
         self.targets = {}
+
         for row in data.itertuples(index=False):
             landmarks = []
             for i in range(len(self.labels), num_landmarks + len(self.labels)):
                 x, y, z = map(float, row[i].split(','))
                 landmarks.extend([x, y, z])
             self.X.append(landmarks)
+
         self.X = torch.tensor(self.X, dtype=torch.float32)
 
         for label in self.labels:
@@ -44,19 +50,17 @@ class PoseGestureDataset(Dataset):
         return len(self.X)
 
     def __getitem__(self, idx):
-        sample_labels = []
-        # get label values for this particular sample
-        for label in self.labels:
-            sample_labels.append(self.targets[label][idx])
+        sample = self.X[idx]
+        sample_labels = [self.targets[label][idx] for label in self.labels]
 
-        return self.X[idx], torch.tensor(sample_labels)
+        return sample, torch.tensor(sample_labels)
 
 
 class Trainer:
 
     def __init__(self, param, side):
         """
-        initalize Class
+        initialize Class
         :param param: str "hand", "stretch" or "dir"
         :param side: str "left" or "right"
         """
@@ -75,7 +79,7 @@ class Trainer:
             self.labels = ["gesture"]
             self.model_file = HandModel
         else:
-            raise ValueError("param needs to be 'dir', 'stretch' or 'hand', not '{param}'!")
+            raise ValueError(f"param needs to be 'dir', 'stretch' or 'hand', not '{self.param}'!")
 
         # init hyperparameters
         self.set_hprams()
@@ -142,7 +146,6 @@ class Trainer:
         for f in list(self.csv_files):
             print(f)
 
-
         # Read and concatenate all CSV files into a single DataFrame
         data_frames = [pd.read_csv(file) for file in self.csv_files]
         data = pd.concat(data_frames, ignore_index=True)
@@ -156,21 +159,43 @@ class Trainer:
         # indexing the pd Dataframe, only keeps the relevant columns
         data = data[rel_columns]
 
-        # data augmentation
-        data_aug = self.augment_data(data)
+        # Augment the data
+        augmented_data_noise = self.augment_data(data, augment_type='noise')
+        augmented_data_scale = self.augment_data(data, augment_type='scale')
 
-        # TODO append augmented data
+        # Combine original and augmented data
+        combined_data = pd.concat([data, augmented_data_noise, augmented_data_scale])
 
         # Split the data into training and testing sets
-        train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
+        train_data, test_data = train_test_split(combined_data, test_size=0.2, random_state=42)
 
         # Create DataLoader for PyTorch
         train_dataset = PoseGestureDataset(train_data, self.num_landmarks, self.labels)
         test_dataset = PoseGestureDataset(test_data, self.num_landmarks, self.labels)
+
         self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False)
 
         self.num_samples = train_dataset.__len__()
+
+        # Debug: Überprüfe einige Augmentationsbeispiele
+        self.compare_augmentation(data, augmented_data_noise, augmented_data_scale)
+
+    def compare_augmentation(self, original_data, augmented_data_noise, augmented_data_scale):
+        """
+        Compare original and augmented data samples.
+        """
+        print("\nComparing original and augmented data...\n")
+        for i in range(5):  # compare 5 random samples
+            idx = random.randint(0, len(original_data) - 1)
+            original_row = original_data.iloc[idx]
+            augmented_row_noise = augmented_data_noise.iloc[idx]
+            augmented_row_scale = augmented_data_scale.iloc[idx]
+            print(f"Sample {i+1}:")
+            print("Original landmarks:", original_row.values[1:])
+            print("Augmented with noise landmarks:", augmented_row_noise.values[1:])
+            print("Augmented with scale landmarks:", augmented_row_scale.values[1:])
+            print()
 
     def loop(self):
         """
@@ -184,7 +209,7 @@ class Trainer:
             epoch_targets_test = torch.tensor([])
             epoch_pred_test = torch.tensor([])
 
-            #TRAIN
+            # TRAIN
             self.model.train()
             for inputs, targets in self.train_loader:
                 self.optimizer.zero_grad()
@@ -195,7 +220,7 @@ class Trainer:
 
             self.writer.add_scalar('Loss/Train', loss.item(), epoch)
 
-            #TEST
+            # TEST
             self.model.eval()
             with torch.no_grad():
                 for inputs, targets in self.test_loader:
@@ -216,28 +241,37 @@ class Trainer:
                 self.writer.add_histogram('Predictions/Test', epoch_pred_test, epoch)
 
         # save trained model
-
-        # log to tb
-        # self.log()
+        self.save_model()
 
     @staticmethod
-    def augment_data(in_data):
+    def augment_data(data, augment_type='noise'):
         """
         Perform data augmentation on the landmark data.
-        Data is stored as landmarks (x,y,z), so we need to implement custom augmentations
+        Data is stored as landmarks (x,y,z), so we need to implement custom augmentations.
 
-        augmentation is performed after relevant landmarks are extracted - see load_data()
-
-        ideas: mirror x, rescale, distort ...
-
-        :param in_data: pd.DataFrame dataset to be augmented
+        :param data: pd.DataFrame dataset to be augmented
+        :param augment_type: str type of augmentation ('noise' or 'scale')
         :return: augmented dataset
         """
-        # TODO implement augmentations
+        augmented_data = []
 
-        # placeholder
-        return None
+        data_np = data.to_numpy()
+        for row in data_np:
+            augmented_row = [row[0]]  # include the gesture label
+            for idx in range(1, len(row)):
+                coords = np.array(row[idx].split(',')).astype(float)
+                if augment_type == 'noise':
+                    # Apply random noise
+                    coords += np.random.normal(0, 0.01, coords.shape)
+                elif augment_type == 'scale':
+                    # Apply random scaling
+                    scale = np.random.uniform(0.9, 1.1)
+                    coords *= scale
+                augmented_row.append(','.join(map(str, coords)))
+            augmented_data.append(augmented_row)
 
+        augmented_df = pd.DataFrame(augmented_data, columns=data.columns)
+        return augmented_df
 
     def save_model(self):
         # Save the trained model
