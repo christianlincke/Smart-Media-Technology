@@ -1,3 +1,14 @@
+"""
+Collect train data for the direction detection.
+
+Setting AUG = True will save a mirrored copy of the same dataset.
+E.g. recording for 'right' arm will also generate a csv file in
+the TrainData/dir_data_left/ folder with the same timestamp.
+
+Other than that, there's a TESTING mode that will record to test_{SIDE} instead.
+
+Last changes by Christian 19. Jul 24
+"""
 import cv2
 import mediapipe as mp
 from Models import ArmModel3D
@@ -12,16 +23,16 @@ TESTING = True ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKIN
 # Which arm should be trained?
 ARM = 'right'  # 'left' or 'right'
 
-# Shall augmented data be saved in a seperate file?
+# Shall augmented data be saved (seperate file)?
 # Uses mirrored left data to fake right data
 AUG = True
+
+# Global variable to set record time for each gesture in seconds
+RECORD_TIME = 2
 
 # Define left/right swap
 SWAP = {'right': 'left',
         'left': 'right',}
-
-# Global variable to set record time for each gesture in seconds
-RECORD_TIME = 1
 
 # Targets to be recorded
 # [[az, el], [..]]
@@ -75,7 +86,7 @@ def record_landmarks(duration, target):
 
         # Process the image and detect the pose.
         results = pose.process(image)
-        results_mir = pose.process(cv2.flip(image,0))
+        results_mir = pose.process(cv2.flip(image,1))
 
         # Draw pose landmarks.
         if results.pose_landmarks:
@@ -134,8 +145,15 @@ def calibrate_gesture(target, gesture_name, record_time):
 all_samples = []
 all_samples_mir = []
 
+# Set iterations - less if we're just testing
+iterations = None
+if TESTING:
+    iterations = range(5)
+else:
+    iterations = range(len(target_values))
+
 # RECORD SAMPLES
-for idx in range(5): #range(len(target_values)):
+for idx in iterations:
     current_samples, current_samples_mir = calibrate_gesture(target_values[idx], target_names[idx], RECORD_TIME)
     all_samples = all_samples + current_samples
     all_samples_mir = all_samples_mir + current_samples_mir
