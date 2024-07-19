@@ -1,6 +1,7 @@
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+from Models import ArmModel3D
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import style
 
@@ -17,9 +18,12 @@ SAMPLE_IDX = 5
 path_left = '../TrainData/test_left/dir_data_left_2024_Jul_18_181408.csv'
 path_right = '../TrainData/test_right/dir_data_right_2024_Jul_18_181408.csv'
 
-# style.use('fivethirtyeight')
-fig = plt.figure()
+# Get landmark masks
+mask_left = ArmModel3D.landmarkMask('left')
+mask_right = ArmModel3D.landmarkMask('right')
 
+# Init matplotlib stuff
+fig = plt.figure()
 if DIMENSIONS.lower() == '3d':
     ax = fig.add_subplot(111, projection='3d')
 else:
@@ -45,10 +49,16 @@ def read_sample(file_name, sample_idx, generate_new_rnd):
         for landmark in rand_sample:
             xs, ys, zs = [float(x) for x in landmark.split(',')]
             pose.append([xs, ys, zs])
-        return label, pose, sample_idx
+        return label, np.array(pose), sample_idx
 
 label_left, pose_left, new_idx = read_sample(path_left, SAMPLE_IDX, True)
 label_right, pose_right, _ = read_sample(path_right, new_idx,False)
+
+# Extract landmarks using the masks
+print("Pre mask: ", len(pose_left), len(pose_right))
+pose_left = pose_left[mask_left]
+pose_right = pose_right[mask_right]
+print("Post mask: ", len(pose_left), len(pose_right))
 
 # Plotting the left pose
 for idx, (x, y, z) in enumerate(pose_left):
