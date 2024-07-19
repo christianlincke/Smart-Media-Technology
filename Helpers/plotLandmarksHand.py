@@ -5,10 +5,10 @@ from mpl_toolkits.mplot3d import axes3d
 from matplotlib import style
 
 # Path to the directory containing the CSV files
-data_directory = 'hand_data/'
+data_directory = '../TrainData/hand_data/'
 
 # Filename
-file_name = 'hand_gesture_data_Fri_Jun_14_12:08:15_2024.csv'
+file_name = 'hand_gesture_data_Fri_Jun_14_120815_2024.csv'
 
 style.use('fivethirtyeight')
 fig = plt.figure()
@@ -52,15 +52,8 @@ with open(data_directory + file_name, 'r') as file:
             line_x.append(pose[joint][0])
             line_y.append(pose[joint][1])
             line_z.append(pose[joint][2])
-        #print(line_x)
-        #print(line_y)
-        #print(line_z)
 
         ax.plot(line_x, line_y, line_z, color='grey')
-
-    #ax.plot(thumb[0], thumb[1], thumb[2])
-#ax.scatter(pose)
-#print(pose)
 
 ax.set_xlabel('x')
 ax.set_ylabel('y')

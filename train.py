@@ -93,6 +93,7 @@ class Trainer:
         # load data
         self.load_data()
 
+
     def set_hprams(self):
         """
         define hyperparameters
@@ -112,6 +113,9 @@ class Trainer:
             self.writer = SummaryWriter(log_dir=f'runs/hand_{time.asctime()}')
         else:
             self.writer = SummaryWriter(log_dir=f'runs/{self.param}_{self.side}_{time.asctime()}')
+
+        # variable to store last loss values
+        self.last_loss = None
 
     def __init_models(self):
         """
@@ -165,6 +169,7 @@ class Trainer:
 
         # Combine original and augmented data
         combined_data = pd.concat([data, augmented_data_noise, augmented_data_scale])
+        self.num_samples_combined = len(combined_data) #
 
         # Split the data into training and testing sets
         train_data, test_data = train_test_split(combined_data, test_size=0.2, random_state=42)
@@ -240,8 +245,8 @@ class Trainer:
                 self.writer.add_histogram('Targets/Test', epoch_targets_test, epoch)
                 self.writer.add_histogram('Predictions/Test', epoch_pred_test, epoch)
 
-        # save trained model
-        self.save_model()
+        # log last loss value
+        self.last_loss = loss.item()
 
     @staticmethod
     def augment_data(data, augment_type='noise'):
@@ -288,10 +293,12 @@ class Trainer:
         self.writer.add_graph(self.model, landmarks)
 
         self.writer.add_hparams({"training files": str(self.csv_files),
-                                 "num samples": self.num_samples,
+                                 "num samples raw": self.num_samples,
+                                 "num samples incl. aug": self.num_samples_combined,
                                  "epochs": self.num_epochs,
                                  "batch size": self.batch_size,
-                                 "learning rate": self.learning_rate})
+                                 "learning rate": self.learning_rate},
+                                {"loss": self.last_loss})
         self.writer.flush()
         self.writer.close()
 
@@ -299,3 +306,4 @@ if __name__ == "__main__":
     myTrainer = Trainer(PARAM, ARM)
     myTrainer.loop()
     myTrainer.save_model()
+    myTrainer.log()

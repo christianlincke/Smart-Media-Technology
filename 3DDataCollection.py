@@ -5,11 +5,23 @@ import numpy as np
 import time
 import csv
 
+# Testing mode - is the code doing the right thing?
+# Test data will be save in TrainData/test_*/
+TESTING = True ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
+
 # Which arm should be trained?
 ARM = 'right'  # 'left' or 'right'
 
+# Shall augmented data be saved in a seperate file?
+# Uses mirrored left data to fake right data
+AUG = True
+
+# Define left/right swap
+SWAP = {'right': 'left',
+        'left': 'right',}
+
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 3
+RECORD_TIME = 1
 
 # Targets to be recorded
 # [[az, el], [..]]
@@ -25,9 +37,13 @@ target_names = ['90° left / 0°',        '45° left /  0°',       '0° / 0°',
                 '90° up',               '90° down'
                 ]
 
-
 # Directory to save the data to
-path = f'TrainData/3D_data_{ARM}/'
+if TESTING:
+    path = f'TrainData/test_{ARM}/'
+    path_mir = f'TrainData/test_{SWAP[ARM]}/'
+else:
+    path = f'TrainData/dir_data_{ARM}/'
+    path_mir = f'TrainData/dir_data_{SWAP[ARM]}/'
 
 # Define how many landmarks we're using
 num_landmarks = 33
@@ -44,6 +60,10 @@ cap = cv2.VideoCapture(0)
 def record_landmarks(duration, target):
     start_time = time.time()
     landmarks_list = []
+    landmarks_list_mir = []
+
+    target_mir = target
+    target_mir[0] = -target_mir[0] # mirror coordinate vertically
 
     while time.time() - start_time < duration:
         ret, frame = cap.read()
@@ -55,12 +75,17 @@ def record_landmarks(duration, target):
 
         # Process the image and detect the pose.
         results = pose.process(image)
+        results_mir = pose.process(cv2.flip(image,0))
 
         # Draw pose landmarks.
         if results.pose_landmarks:
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             landmarks = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark])
+
+            landmarks_mir = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results_mir.pose_landmarks.landmark])
             landmarks_list.append((landmarks, target))
+
+            landmarks_list_mir.append((landmarks_mir, target_mir))
 
         # flip frame horizontally
         frame = cv2.flip(frame, 1)
@@ -73,7 +98,7 @@ def record_landmarks(duration, target):
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
 
-    return landmarks_list
+    return landmarks_list, landmarks_list_mir
 
 # Data collection with automated recording
 def calibrate_gesture(target, gesture_name, record_time):
@@ -96,9 +121,9 @@ def calibrate_gesture(target, gesture_name, record_time):
         cv2.imshow('Pose Gesture recording', frame)
 
         if cv2.waitKey(5) & 0xFF == ord('r'):
-            landmarks = record_landmarks(record_time, target)
+            landmarks, landmarks_mir = record_landmarks(record_time, target)
             cv2.destroyAllWindows()  # Close the current window before opening the next one
-            return landmarks
+            return landmarks, landmarks_mir
 
         if cv2.waitKey(5) & 0xFF == ord('q'):
             cap.release()
@@ -107,23 +132,35 @@ def calibrate_gesture(target, gesture_name, record_time):
 
 # define empty array to save the data
 all_samples = []
+all_samples_mir = []
 
 # RECORD SAMPLES
-for idx in range(len(target_values)):
-    current_samples = calibrate_gesture(target_values[idx], target_names[idx], RECORD_TIME)
+for idx in range(5): #range(len(target_values)):
+    current_samples, current_samples_mir = calibrate_gesture(target_values[idx], target_names[idx], RECORD_TIME)
     all_samples = all_samples + current_samples
+    all_samples_mir = all_samples_mir + current_samples_mir
+
 
 # Get timestamp for save file name
-date_time = time.asctime().replace(' ', '_')[4:] # return month_day_hh:mm:ss_year
+date_time = time.asctime().replace(' ', '_').replace(':', '')[4:] # return month_day_hh:mm:ss_year
 date_time = date_time[-4:] + '_' + date_time[:-5] # turn into YYYY_MM_DD_hh:mm:ss
 
 # Save gesture data to CSV
-with open(path + f"3D_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
+with open(path + f"dir_data_{ARM}_{date_time}.csv", 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['az'] + ['el'] + [i for i in range(num_landmarks)])
     for landmarks, gesture_label in all_samples:
         row = [gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
         writer.writerow(row)
+
+if AUG:
+    # Save mirrored gesture data to CSV
+    with open(path_mir + f"dir_data_{SWAP[ARM]}_{date_time}.csv", 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['az'] + ['el'] + [i for i in range(num_landmarks)])
+        for landmarks, gesture_label in all_samples_mir:
+            row = [gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
+            writer.writerow(row)
 
 print("Calibration data saved successfully!")
 
