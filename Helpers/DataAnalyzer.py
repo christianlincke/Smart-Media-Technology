@@ -4,6 +4,7 @@ import os
 import numpy as np
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
+import time
 
 # Create writer for logging
 #writer = SummaryWriter(log_dir=f'runs/arms_3D_{ARM}_{time.asctime()}')
@@ -41,8 +42,13 @@ data = pd.concat(data_frames, ignore_index=True)
 data_array = data.to_numpy()
 
 labels = np.array([])
-for row in data_array:
-    labels = np.append(labels, [row[0]])
+if 'dir' in csv_files[0]:
+    print('dir!')
+    for row in data_array:
+        labels = np.append(labels, str([row[0], row[1]])) # direction data hast 2 labels!
+else:
+    for row in data_array:
+        labels = np.append(labels, [row[0]])
 
 table = PrettyTable()
 bins, counts = np.unique(labels, return_counts=True)
@@ -55,17 +61,8 @@ count_min, count_max = min(counts), max(counts)
 
 plt.bar(bins, counts)
 plt.ylim(count_min - (count_min / 100), count_max + (count_min / 100))
+plt.title(dir_list[dir-1] + ' ' + time.strftime("%A %B %d, %Y %I:%M%p"))
 plt.show()
-
-#print(f'Length: {}')
-
-#counts, bins = np.histogram(data)
-
-#print(counts, bins)
-
-# Create DataLoader for PyTorch
-
-
 
 """
 # log a histogram of all targets/predictions
