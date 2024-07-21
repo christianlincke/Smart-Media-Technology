@@ -263,7 +263,7 @@ class Detector:
                 prediction_direction = self.models[f"dir_{side}"](landmarks_conv[f"dir_{side}"])
                 self.values_raw[f"az_{side}"] = prediction_direction[0][0].cpu()
                 self.values_raw[f"el_{side}"] = prediction_direction[0][1].cpu()
-    @profile
+
     def eval_hands(self):
         """
         evaluates Hand data with the NN
@@ -307,7 +307,7 @@ class Detector:
         for side in ["left", "right"]:
             if side_indexes[0] != side and side_indexes[1] != side:
                 self.values_raw[f"hand_{side}"] = 0
-    @profile
+
     def run(self):
         """
         open video, call the eval_*, send_midi and show_image methods for each frame
@@ -328,7 +328,7 @@ class Detector:
 
             # Get arm stretch prediction and draw landmarks.
             if self.pose_results.pose_landmarks:
-                self.eval_pose()
+                self.eval_pose(self.pose_results)
             else:
                 for side in self.sides:
                     self.values_raw[f"stretch_{side}"] = 0
@@ -369,7 +369,7 @@ class Detector:
         to_ranges = np.array([MIDI_MAPPINGS[val][1] for val in self.value_names])
         raw_values = np.array([self.values_raw[val] for val in self.value_names])
 
-        m = (to_ranges[:, 1] - to_ranges[:, 0]) / (from_ranges[:, 1] - from_ranges[:, 0])
+        m = (to_ranges[:, 1] - to_ranges[:, 0]) / (from_ranges[:, 0] - from_ranges[:, 1])
         b = to_ranges[:, 0] - from_ranges[:, 0] * m
 
         self.values_midi = np.clip((m * raw_values + b).astype(int), to_ranges[:, 0], to_ranges[:, 1])
