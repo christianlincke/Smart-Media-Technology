@@ -86,16 +86,14 @@ def record_landmarks(duration, target):
 
         # Process the image and detect the pose.
         results = pose.process(image)
-        results_mir = pose.process(cv2.flip(image,1))
+        results_mir = pose.process(cv2.flip(image, 1))
 
         # Draw pose landmarks.
         if results.pose_landmarks:
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             landmarks = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark])
-
             landmarks_mir = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results_mir.pose_landmarks.landmark])
             landmarks_list.append((landmarks, target))
-
             landmarks_list_mir.append((landmarks_mir, target_mir))
 
         # flip frame horizontally

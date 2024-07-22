@@ -95,8 +95,8 @@ class Trainer:
         if self.param == 'hand':
             data_directory = f'TrainData/hand_data/'
         else:
-            data_directory = f'/Users/oliverparvini/Desktop/Uni/SMT/Smart-Media-Technology/TrainData/{self.param}_data_{self.side}'
-            #data_directory = f'/Users/oliverparvini/Desktop/Uni/SMT/Smart-Media-Technology/TrainData/stretch_data_right'
+            #data_directory = f'/Users/oliverparvini/Desktop/Uni/SMT/Smart-Media-Technology/TrainData/{self.param}_data_{self.side}'
+            data_directory = f'/Users/evantanggo/PycharmProjects/Smart-Media-Technology_1/TrainData/{self.param}_data_{self.side}'
 
         print(f"Checking directory: {data_directory}")  # Debugging statement
 
@@ -209,11 +209,26 @@ class Trainer:
         augmented_df = pd.DataFrame(augmented_data, columns=data.columns)
         return augmented_df
 
+    def save_model(self):
+        # Save the trained model
+        if self.param == "hand":
+            save_path = f'Models/{self.param}_model.pth'
+        else:
+            save_path = f'Models/{self.param}_model_{self.side}.pth'
+
+        torch.save(self.model.state_dict(), save_path)
+        print("Model training completed and saved.")
+
 def train_func(config):
     myTrainer = Trainer(PARAM, ARM, config)
     myTrainer.loop(config)
 
     return {"loss": myTrainer.last_loss}
+
+def save_func(config):
+    myTrainer = Trainer(PARAM, ARM, config)
+    myTrainer.loop(config)
+    myTrainer.save_model()
 
 if __name__ == "__main__":
     config = {
@@ -240,5 +255,9 @@ if __name__ == "__main__":
         )
 
         print("Best config: ", result.get_best_config(metric="loss", mode="min"))
+        best_conf = result.get_best_config(metric="loss", mode="min")
+
     except Exception as e:
         print(f"An error occurred: {e}")
+
+    save_func(best_conf)
