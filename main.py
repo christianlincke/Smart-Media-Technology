@@ -235,7 +235,7 @@ class Detector:
                 port.send(msg)
             print('note off!')
 
-    def eval_pose(self, pose_results):
+    def eval_pose(self):
         """
         evaluates the pose data with the NN
 
@@ -328,7 +328,7 @@ class Detector:
 
             # Get arm stretch prediction and draw landmarks.
             if self.pose_results.pose_landmarks:
-                self.eval_pose(self.pose_results)
+                self.eval_pose()
             else:
                 for side in self.sides:
                     self.values_raw[f"stretch_{side}"] = 0
@@ -369,7 +369,7 @@ class Detector:
         to_ranges = np.array([MIDI_MAPPINGS[val][1] for val in self.value_names])
         raw_values = np.array([self.values_raw[val] for val in self.value_names])
 
-        m = (to_ranges[:, 1] - to_ranges[:, 0]) / (from_ranges[:, 0] - from_ranges[:, 1])
+        m = (to_ranges[:, 1] - to_ranges[:, 0]) / (from_ranges[:, 1] - from_ranges[:, 0])
         b = to_ranges[:, 0] - from_ranges[:, 0] * m
 
         self.values_midi = np.clip((m * raw_values + b).astype(int), to_ranges[:, 0], to_ranges[:, 1])
