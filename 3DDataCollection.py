@@ -175,7 +175,7 @@ if AUG:
         writer = csv.writer(file)
         writer.writerow(['az'] + ['el'] + [i for i in range(num_landmarks)])
         for landmarks, gesture_label in all_samples_mir:
-            row = [gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
+            row = [-gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
             writer.writerow(row)
 
 print("Calibration data saved successfully!")
