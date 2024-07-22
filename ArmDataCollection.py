@@ -5,25 +5,42 @@ import numpy as np
 import time
 import csv
 
+# Testing mode - is the code doing the right thing?
+# Test data will be save in TrainData/test_*/
+TESTING = True ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
+
 # Which arm should be trained?
 ARM = 'right'  # or 'right'
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 5
+RECORD_TIME = 3
+
+# Shall augmented data be saved (seperate file)?
+# Uses mirrored left data to fake right data
+AUG = True
 
 # stretch data is stored between fully stretched and fully bent. Indices 0 thru 4
 target_values = [0.0, 0.25, 0.5, 0.75, 1.0]
-target_names = ["100% bent", "75% bent", "50% bent", "75% straight", "100% straight", ]
+target_names = ["100% bent", "75% bent", "50% bent", "75% straight", "100% straight"]
+
+# Define left/right swap
+SWAP = {'right': 'left',
+        'left': 'right'}
 
 # Directory to save the data to
-path = f'TrainData/stretch_data_{ARM}/'
+if TESTING:
+    path = f'TrainData/test_{ARM}/'
+    path_mir = f'TrainData/test_{SWAP[ARM]}/'
+else:
+    path = f'TrainData/stretch_data_{ARM}/'
+    path_mir = f'TrainData/stretch_data_{SWAP[ARM]}/'
 
 # Define how many landmarks we're using
 num_landmarks = 33
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=True, min_detection_confidence=0.5)
+pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, enable_segmentation=True, min_detection_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
 
 # Capture video from webcam.
@@ -33,6 +50,7 @@ cap = cv2.VideoCapture(0)
 def record_landmarks(duration, target):
     start_time = time.time()
     landmarks_list = []
+    landmarks_list_mir = []
 
     while time.time() - start_time < duration:
         ret, frame = cap.read()
@@ -44,12 +62,15 @@ def record_landmarks(duration, target):
 
         # Process the image and detect the pose.
         results = pose.process(image)
+        results_mir = pose.process(cv2.flip(image, 1))
 
         # Draw pose landmarks.
         if results.pose_landmarks:
             mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             landmarks = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results.pose_landmarks.landmark])
+            landmarks_mir = np.array([(landmark.x, landmark.y, landmark.z) for landmark in results_mir.pose_landmarks.landmark])
             landmarks_list.append((landmarks, target))
+            landmarks_list_mir.append((landmarks_mir, target))
 
         # flip frame horizontally
         frame = cv2.flip(frame, 1)
@@ -62,7 +83,7 @@ def record_landmarks(duration, target):
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
 
-    return landmarks_list
+    return landmarks_list, landmarks_list_mir
 
 # Data collection with automated recording
 def calibrate_gesture(target, gesture_name, record_time):
@@ -85,22 +106,24 @@ def calibrate_gesture(target, gesture_name, record_time):
         cv2.imshow('Pose Gesture recording', frame)
 
         if cv2.waitKey(5) & 0xFF == ord('r'):
-            landmarks = record_landmarks(record_time, target)
+            landmarks, landmarks_mir = record_landmarks(record_time, target)
             cv2.destroyAllWindows()  # Close the current window before opening the next one
-            return landmarks
+            return landmarks, landmarks_mir
 
         if cv2.waitKey(5) & 0xFF == ord('q'):
             cap.release()
             cv2.destroyAllWindows()
             exit()
 
-# define empty array to save the data
+# define empty arrays to save the data
 all_samples = []
+all_samples_mir = []
 
 # RECORD SAMPLES
 for idx in range(len(target_values)):
-    current_samples = calibrate_gesture(target_values[idx], target_names[idx], RECORD_TIME)
+    current_samples, current_samples_mir = calibrate_gesture(target_values[idx], target_names[idx], RECORD_TIME)
     all_samples = all_samples + current_samples
+    all_samples_mir = all_samples_mir + current_samples_mir
 
 # Get timestamp for save file name
 date_time = time.asctime().replace(' ', '_').replace(':', '')[4:] # return month_day_hh:mm:ss_year
@@ -113,6 +136,15 @@ with open(path + f"stretch_data_{ARM}_{date_time}.csv", 'w', newline='') as file
     for landmarks, gesture_label in all_samples:
         row = [gesture_label] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
         writer.writerow(row)
+
+if AUG:
+    # Save mirrored data
+    with open(path_mir + f"stretch_data_{SWAP[ARM]}_{date_time}.csv", 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['gesture'] + [i for i in range(num_landmarks)])
+        for landmarks, gesture_label in all_samples_mir:
+            row = [gesture_label] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
+            writer.writerow(row)
 
 print("Calibration data saved successfully!")
 
