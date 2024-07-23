@@ -28,7 +28,7 @@ ARM = 'left'  # 'left' or 'right'
 AUG = True
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 2
+RECORD_TIME = 5
 
 # Define left/right swap
 SWAP = {'right': 'left',
