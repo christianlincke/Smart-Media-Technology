@@ -21,7 +21,7 @@ import csv
 TESTING = True ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
 
 # Which arm should be trained?
-ARM = 'right'  # 'left' or 'right'
+ARM = 'left'  # 'left' or 'right'
 
 # Shall augmented data be saved (seperate file)?
 # Uses mirrored left data to fake right data
@@ -73,8 +73,10 @@ def record_landmarks(duration, target):
     landmarks_list = []
     landmarks_list_mir = []
 
-    target_mir = target
-    target_mir[0] = -target_mir[0] # mirror coordinate vertically
+    # create mirrored target values
+    target_mir = [None, None]
+    target_mir[0], target_mir[1] = -target[0], target[1]
+    print(f"Target: {target} Mirrored: {target_mir}")
 
     while time.time() - start_time < duration:
         ret, frame = cap.read()
@@ -175,7 +177,7 @@ if AUG:
         writer = csv.writer(file)
         writer.writerow(['az'] + ['el'] + [i for i in range(num_landmarks)])
         for landmarks, gesture_label in all_samples_mir:
-            row = [-gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
+            row = [gesture_label[0]] + [gesture_label[1]] + [f'{x},{y},{z}' for (x, y, z) in landmarks]
             writer.writerow(row)
 
 print("Calibration data saved successfully!")
