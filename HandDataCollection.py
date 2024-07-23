@@ -15,6 +15,9 @@ import csv
 # Directory to fsave the data to
 path = 'TrainData/hand_data/'
 
+# Flip image before detection?
+FLIP = False
+
 # Global variable to set record time for each gesture in seconds
 RECORD_TIME = 10
 
@@ -38,6 +41,10 @@ def record_landmarks(duration, gesture_label):
 
         # Convert the BGR image to RGB.
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Flip Image
+        if FLIP:
+            image = cv2.flip(image, 1)
 
         # Process the image and detect the hands.
         results = hands.process(image)

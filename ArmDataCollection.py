@@ -7,13 +7,13 @@ import csv
 
 # Testing mode - is the code doing the right thing?
 # Test data will be save in TrainData/test_*/
-TESTING = True ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
+TESTING = False ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
 
 # Which arm should be trained?
 ARM = 'right'  # or 'right'
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 3
+RECORD_TIME = 5
 
 # Shall augmented data be saved (seperate file)?
 # Uses mirrored left data to fake right data

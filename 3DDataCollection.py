@@ -17,18 +17,18 @@ import time
 import csv
 
 # Testing mode - is the code doing the right thing?
-# Test data will be save in TrainData/test_*/
-TESTING = True ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
+# Test data will be saved in TrainData/test_*/
+TESTING = False ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
 
 # Which arm should be trained?
-ARM = 'right'  # 'left' or 'right'
+ARM = 'left'  # 'left' or 'right'
 
-# Shall augmented data be saved (seperate file)?
+# Shall augmented data be saved (separate file)?
 # Uses mirrored left data to fake right data
 AUG = True
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 2
+RECORD_TIME = 5
 
 # Define left/right swap
 SWAP = {'right': 'left',
@@ -61,7 +61,7 @@ num_landmarks = 33
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=True, min_detection_confidence=0.5)
+pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, enable_segmentation=True, min_detection_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
 
 # Capture video from webcam.
@@ -73,8 +73,10 @@ def record_landmarks(duration, target):
     landmarks_list = []
     landmarks_list_mir = []
 
-    target_mir = target
-    target_mir[0] = -target_mir[0] # mirror coordinate vertically
+    # create mirrored target values
+    target_mir = [None, None]
+    target_mir[0], target_mir[1] = -target[0], target[1]
+    print(f"Target: {target} Mirrored: {target_mir}")
 
     while time.time() - start_time < duration:
         ret, frame = cap.read()
@@ -116,7 +118,7 @@ def calibrate_gesture(target, gesture_name, record_time):
     :param target: float pose target value
     :param gesture_name: str pose name
     :param record_time: int recording time
-    :return: landmarks list of recorded lanmarks
+    :return: landmarks list of recorded landmarks
     """
     while True:
         ret, frame = cap.read()
