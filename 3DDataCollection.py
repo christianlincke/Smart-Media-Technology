@@ -17,13 +17,13 @@ import time
 import csv
 
 # Testing mode - is the code doing the right thing?
-# Test data will be save in TrainData/test_*/
-TESTING = True ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
+# Test data will be saved in TrainData/test_*/
+TESTING = False ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
 
 # Which arm should be trained?
 ARM = 'left'  # 'left' or 'right'
 
-# Shall augmented data be saved (seperate file)?
+# Shall augmented data be saved (separate file)?
 # Uses mirrored left data to fake right data
 AUG = True
 
@@ -61,7 +61,7 @@ num_landmarks = 33
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=True, min_detection_confidence=0.5)
+pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, enable_segmentation=True, min_detection_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
 
 # Capture video from webcam.
@@ -118,7 +118,7 @@ def calibrate_gesture(target, gesture_name, record_time):
     :param target: float pose target value
     :param gesture_name: str pose name
     :param record_time: int recording time
-    :return: landmarks list of recorded lanmarks
+    :return: landmarks list of recorded landmarks
     """
     while True:
         ret, frame = cap.read()

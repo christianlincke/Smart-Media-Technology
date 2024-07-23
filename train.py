@@ -18,7 +18,7 @@ from ray.tune.schedulers import ASHAScheduler
 
 # Which arm should be trained?
 ARM = 'right'  # 'left' or 'right'
-PARAM = 'stretch'  # 'stretch' or 'dir' or 'hand'
+PARAM = 'hand'  # 'stretch' or 'dir' or 'hand'
 
 class PoseGestureDataset(Dataset):
     def __init__(self, data, num_landmarks, labels):
@@ -93,10 +93,13 @@ class Trainer:
 
     def load_data(self):
         if self.param == 'hand':
-            data_directory = f'TrainData/hand_data/'
+            # data_directory = f'/Users/oliverparvini/Desktop/Uni/SMT/Smart-Media-Technology/TrainData/hand_data/'
+            # data_directory = f'/Users/evantanggo/PycharmProjects/Smart-Media-Technology_1/TrainData/hand_data/'
+            data_directory = f'/Users/christian/Desktop/UNI/SMT/HandSpreadDetection/TrainData/hand_data/'
         else:
             #data_directory = f'/Users/oliverparvini/Desktop/Uni/SMT/Smart-Media-Technology/TrainData/{self.param}_data_{self.side}'
-            data_directory = f'/Users/evantanggo/PycharmProjects/Smart-Media-Technology_1/TrainData/{self.param}_data_{self.side}'
+            #data_directory = f'/Users/evantanggo/PycharmProjects/Smart-Media-Technology_1/TrainData/{self.param}_data_{self.side}'
+            data_directory = f'/Users/christian/Desktop/UNI/SMT/HandSpreadDetection/TrainData/{self.param}_data_{self.side}'
 
         print(f"Checking directory: {data_directory}")  # Debugging statement
 
@@ -138,7 +141,7 @@ class Trainer:
 
         self.num_samples = train_dataset.__len__()
 
-        self.compare_augmentation(data, augmented_data_noise, augmented_data_scale)
+        #self.compare_augmentation(data, augmented_data_noise, augmented_data_scale)
 
     def compare_augmentation(self, original_data, augmented_data_noise, augmented_data_scale):
         print("\nComparing original and augmented data...\n")
@@ -189,14 +192,18 @@ class Trainer:
 
         self.last_loss = loss.item()
 
-    @staticmethod
-    def augment_data(data, augment_type='noise'):
+    def augment_data(self, data, augment_type='noise'):
         augmented_data = []
 
         data_np = data.to_numpy()
         for row in data_np:
-            augmented_row = [row[0]]
-            for idx in range(1, len(row)):
+
+            if self.param == "dir":
+                augmented_row = [row[0], row[1]]
+            else:
+                augmented_row = [row[0]]
+
+            for idx in range(len(self.labels), len(row)):
                 coords = np.array(row[idx].split(',')).astype(float)
                 if augment_type == 'noise':
                     coords += np.random.normal(0, 0.01, coords.shape)
@@ -232,9 +239,9 @@ def save_func(config):
 
 if __name__ == "__main__":
     config = {
-        "num_epochs": tune.grid_search([50, 100]),
+        "num_epochs": tune.grid_search([50, 100, 150]),
         "learning_rate": tune.grid_search([0.001, 0.0001]),
-        "batch_size": tune.grid_search([32, 64])
+        "batch_size": tune.grid_search([16, 32, 64])
     }
 
     scheduler = ASHAScheduler(
