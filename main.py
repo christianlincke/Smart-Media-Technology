@@ -16,11 +16,14 @@ import copy
 from google.protobuf.json_format import MessageToDict
 
 # Which arm should be detected? 'left' or 'right'
-ARM = 'right'  # 'left' or 'right' or 'both'
+ARM = 'both'  # 'left' or 'right' or 'both'
 
 # left and right hand are reversed for some reason.
 # Until we figure out why, this will fix it.
 FLIP_HANDS = True
+
+# Reset hand values to 0 if not detected
+NULL_HANDS = True
 
 # Set FPS
 FPS = 30
@@ -115,8 +118,8 @@ class Detector:
         # Capture video from webcam.
         self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FPS, FPS)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     def __init_mp(self, num_hands):
         """
@@ -304,9 +307,10 @@ class Detector:
                 self.values_raw[f"hand_{side_indexes[idx]}"] = prediction_hand.cpu().item()
 
         # set values for hands that aren't detetcted to 0
-        for side in ["left", "right"]:
-            if side_indexes[0] != side and side_indexes[1] != side:
-                self.values_raw[f"hand_{side}"] = 0
+        if NULL_HANDS:
+            for side in ["left", "right"]:
+                if side_indexes[0] != side and side_indexes[1] != side:
+                    self.values_raw[f"hand_{side}"] = 0
 
     def run(self):
         """
@@ -338,7 +342,10 @@ class Detector:
             # Get hand spread prediction and draw landmarks
             if self.hand_results.multi_hand_landmarks:
                 self.eval_hands()
+            elif NULL_HANDS and not self.hand_results.multi_hand_landmarks:
+                pass
             else:
+                # Reset hand values to 0 if not detected
                 self.values_raw["hand_right"] = 0
                 self.values_raw["hand_left"] = 0
 
