@@ -5,7 +5,7 @@ Setting AUG = True will save a mirrored copy of the same dataset.
 E.g. recording for 'right' arm will also generate a csv file in
 the TrainData/dir_data_left/ folder with the same timestamp.
 
-Other than that, there's a TESTING mode that will record to test_{SIDE} instead.
+Other than that, there's a TESTING mode that will record to test_{SIDE} instead. Only for debugging and data evaluation
 
 Last changes by Christian 19. Jul 24
 """
@@ -21,14 +21,14 @@ import csv
 TESTING = False ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKING
 
 # Which arm should be trained?
-ARM = 'left'  # 'left' or 'right'
+ARM = 'right'  # 'left' or 'right'
 
 # Shall augmented data be saved (separate file)?
 # Uses mirrored left data to fake right data
 AUG = True
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 5
+RECORD_TIME = 10
 
 # Define left/right swap
 SWAP = {'right': 'left',

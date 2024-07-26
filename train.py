@@ -1,3 +1,13 @@
+"""
+Training script
+Select the parameter and side to be trained by modifying PARAM and SIDE.
+
+Run this from terminal to start Tensorboard:
+    tensorboard --logdir=runs
+Note: (maybe) Safari won't open the page, use chrome/firefox etc. if it doesn't work!
+
+last change 24. Jul 2024 by Christian
+"""
 import os
 import pandas as pd
 import numpy as np
@@ -11,14 +21,13 @@ from sklearn.model_selection import train_test_split
 from torch.utils.tensorboard import SummaryWriter
 import glob
 import random
-
 import ray
 from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 
 # Which arm should be trained?
 ARM = 'right'  # 'left' or 'right'
-PARAM = 'hand'  # 'stretch' or 'dir' or 'hand'
+PARAM = 'dir'  # 'stretch' or 'dir' or 'hand'
 
 class PoseGestureDataset(Dataset):
     def __init__(self, data, num_landmarks, labels):
@@ -225,6 +234,10 @@ class Trainer:
 
         torch.save(self.model.state_dict(), save_path)
         print("Model training completed and saved.")
+
+    def log_hparams(self):
+        self.writer.add_hparams({'epochs': self.num_epochs, 'lr': self.learning_rate, 'batchsize': self.batch_size},
+                           {'loss': self.last_loss})
 
 def train_func(config):
     myTrainer = Trainer(PARAM, ARM, config)

@@ -3,8 +3,12 @@ perform 3d-direction, spread and hand detection for one arm.
 arm selection midi setup can be done at the beginning of the script
 last change: 16.07.2024 by christian
 
-GPU on apple?
-https://developer.apple.com/metal/pytorch/
+The MIDI settings can be modified.
+MIDI Output can be turned off by MIDI. Only useful for debugging
+The MIDI Mode can be set by MIDI_MODE. 'Note' is not fully implemented yet and will only trigger a constant note.
+The MIDI Channel can be set by MIDI_CHANNEL
+The MIDI Control for each parameter can be set by MIDI_CONTROL
+
 """
 import cv2
 import mediapipe as mp
@@ -15,18 +19,18 @@ import mido
 import copy
 from google.protobuf.json_format import MessageToDict
 
-# Which arm should be detected? 'left' or 'right'
+# define midi port
+if MIDI == 'ON':
+    port = mido.open_output('IAC-Treiber Bus 1')
+
+# Showmode? Hides Debug parameters
+SHOW = True
+
+# Which arm should be detected?
 ARM = 'both'  # 'left' or 'right' or 'both'
 
-# left and right hand are reversed for some reason.
-# Until we figure out why, this will fix it.
-FLIP_HANDS = True
-
 # Reset hand values to 0 if not detected
-NULL_HANDS = True
-
-# Set FPS
-FPS = 30
+NULL_HANDS = False
 
 # Define Midi stuff
 MIDI = 'ON'  # Turn Midi Output 'ON' or 'OFF'
@@ -57,14 +61,16 @@ midi_vel = 100  # MIDI velocity
 MIDI_THRESH = 0.5  # threshold at which the note triggers, only used if MIDI_MODE is 'NOTE'
 dir_scale_factor = 14  # Factor to scale to one octave, only used if MIDI_MODE is 'NOTE'
 
+# left and right hand are reversed for some reason.
+# Until we figure out why, this will fix it.
+FLIP_HANDS = True
+
+# Set FPS
+FPS = 30
+
 # set color and font for on screen text
 FONT = cv2.FONT_HERSHEY_SIMPLEX
-FONTCOLOR = (0, 255, 255)
-
-# define midi port
-if MIDI == 'ON':
-    port = mido.open_output('IAC-Treiber Bus 1')
-
+FONTCOLOR = (250, 80, 80)
 
 class Detector:
 
@@ -118,6 +124,7 @@ class Detector:
         # Capture video from webcam.
         self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FPS, FPS)
+        cv2.namedWindow("Pose Gesture Recognition", cv2.WINDOW_NORMAL)
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -404,13 +411,13 @@ class Detector:
         # Flip & Display the image.
         frame_flip = cv2.flip(self.frame, 1)
 
-        cv2.putText(frame_flip, f"Hand and Arm detection. Press 'q' to quit.", (10, 30), FONT, 1, FONTCOLOR, 2)
-
-        # print all values
-        for idx, val in enumerate(self.value_names):
-            pos = 30 * (idx+1) + 30
-            cv2.putText(frame_flip, f"{val}:  {self.values_raw[val]:.2f}  {self.values_midi[val]:03d}",
-                        (10, pos), FONT, 1, FONTCOLOR, 2)
+        if not SHOW:
+            cv2.putText(frame_flip, f"Hand and Arm detection. Press 'q' to quit.", (10, 30), FONT, 1, FONTCOLOR, 2)
+            # print all values
+            for idx, val in enumerate(self.value_names):
+                pos = 30 * (idx+1) + 30
+                cv2.putText(frame_flip, f"{val}:  {self.values_raw[val]:.2f}  {self.values_midi[val]:03d}",
+                            (10, pos), FONT, 1, FONTCOLOR, 2)
 
         cv2.imshow('Pose Gesture Recognition', frame_flip)
 

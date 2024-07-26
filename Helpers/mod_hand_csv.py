@@ -1,6 +1,9 @@
+"""
+Helper script to modify old label names in hand data files.
+(Hopefully) not needed anymore.
+"""
 import pandas as pd
 import os
-
 
 def rename_columns_in_csv(file_path):
     # Read the CSV file into a DataFrame

@@ -1,3 +1,8 @@
+"""
+Perform Histogram Analysis of collected Data.
+Useful to evaluate biases, correctness of labels etc.
+
+"""
 import pandas as pd
 import glob
 import os

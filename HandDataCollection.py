@@ -3,7 +3,7 @@ This Script is used for training data collection.
 Records landmark samples for 0% (closed fist), 25%, 50%, 75% and 100% open hand.
 Landmark data is saved in a csv file.
 
-You dont need to run this if you just want to turn your hand gestures into MIDI.
+You don't need to run this if you just want to turn your hand gestures into MIDI.
 """
 
 import cv2
@@ -12,11 +12,11 @@ import numpy as np
 import time
 import csv
 
-# Directory to fsave the data to
+# Directory to save the data to
 path = 'TrainData/hand_data/'
 
 # Flip image before detection?
-FLIP = False
+FLIP = True
 
 # Global variable to set record time for each gesture in seconds
 RECORD_TIME = 10
@@ -42,7 +42,7 @@ def record_landmarks(duration, gesture_label):
         # Convert the BGR image to RGB.
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Flip Image
+        # Flip frame
         if FLIP:
             image = cv2.flip(image, 1)
 
@@ -57,7 +57,8 @@ def record_landmarks(duration, gesture_label):
                 landmarks_list.append((landmarks, gesture_label))
 
         # flip frame horizontally
-        frame = cv2.flip(frame, 1)
+            frame = cv2.flip(frame, 1)
+
         # Display the image with instructions.
         elapsed_time = time.time() - start_time
         cv2.putText(frame, f"Recording {gesture_label}... {duration - int(elapsed_time)}s left. Press 'q' to quit.", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)

@@ -1,3 +1,10 @@
+"""
+Arm train data collection.
+Records landmark samples for 0% (bent arm), 25%, 50%, 75% and 100% straight arm.
+Landmark data is saved in a csv file.
+
+You don't need to run this if you just want to turn your hand gestures into MIDI.
+"""
 import cv2
 import mediapipe as mp
 from Models import ArmModel
@@ -13,7 +20,7 @@ TESTING = False ## PLEASE DON'T CHANGE THIS UNLESS YOU'RE SURE HTE CODE IS WORKI
 ARM = 'right'  # or 'right'
 
 # Global variable to set record time for each gesture in seconds
-RECORD_TIME = 5
+RECORD_TIME = 10
 
 # Shall augmented data be saved (seperate file)?
 # Uses mirrored left data to fake right data

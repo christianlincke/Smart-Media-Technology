@@ -15,13 +15,3 @@ while True:
         port.send(msg)
         time.sleep(0.01)
         print('-' * i)
-"""    for n in notes:
-        msg = mido.Message('note_on', note=n)
-        port.send(msg)
-
-        time.sleep(0.5) # wait 0.5 seconds
-
-        msg = mido.Message('note_off', note=n)
-        port.send(msg)
-"""
-

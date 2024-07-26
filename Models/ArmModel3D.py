@@ -1,7 +1,6 @@
 """
 Model used for 3D arm direction detection.
-First draft, based on response by chatgpt.
-To be optimised.
+
 """
 import torch
 import torch.nn as nn

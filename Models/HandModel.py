@@ -1,7 +1,5 @@
 """
 This is the NN Model for Hand Spread Detection.
-I put this into its own file to avoid issues with multiple definitions of essentially the same thing.
-Used by HandModelTraining.py and HandDetection.py
 """
 import torch
 import torch.nn as nn

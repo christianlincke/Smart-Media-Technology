@@ -1,3 +1,8 @@
+"""
+Helper to plot recorded hand landmarks.
+Useful for Data evaluation.
+"""
+
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
